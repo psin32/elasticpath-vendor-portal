@@ -63,11 +63,8 @@ export default function ProductDetailsPage({
 
       if (foundProduct) {
         setProduct(foundProduct);
-        // Assuming product has an 'attributes' object with 'name', 'description', 'slug', 'status', 'commodity_type', 'sku'
-        // and an 'images' array with a 'main' image.
-        // For now, we'll just set a placeholder image.
         setMainImage({
-          url: "https://via.placeholder.com/150", // Placeholder image URL
+          url: productsData?.included?.main_images?.[0]?.link?.href || "",
           alt: foundProduct.attributes.name || "Product Image",
         });
       } else {
@@ -336,15 +333,17 @@ export default function ProductDetailsPage({
                           Main Image
                         </label>
                         <div className="relative">
-                          <img
-                            src={
-                              mainImage?.url ||
-                              "https://via.placeholder.com/400x300"
-                            }
-                            alt={mainImage?.alt || "Product Image"}
-                            className="w-full h-auto rounded-lg object-cover cursor-pointer hover:opacity-90 transition-opacity"
-                            onClick={() => setSelectedImage(mainImage)}
-                          />
+                          <div className="w-full max-w-md mx-auto">
+                            <img
+                              src={
+                                mainImage?.url ||
+                                "https://placehold.co/400x400?text=Product+Image"
+                              }
+                              alt={mainImage?.alt || "Product Image"}
+                              className="w-96 h-96 rounded-lg object-cover cursor-pointer hover:opacity-90 transition-all duration-200 shadow-md border border-gray-200 hover:shadow-lg"
+                              onClick={() => setSelectedImage(mainImage)}
+                            />
+                          </div>
                           <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
                             <svg
                               className="h-5 w-5 text-gray-400"
@@ -360,6 +359,11 @@ export default function ProductDetailsPage({
                               />
                             </svg>
                           </div>
+                        </div>
+                        <div className="mt-2 text-center">
+                          <p className="text-xs text-gray-500">
+                            Image size: 400×400 pixels • Click to view larger
+                          </p>
                         </div>
                       </div>
 
