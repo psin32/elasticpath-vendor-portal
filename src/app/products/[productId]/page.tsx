@@ -3,49 +3,34 @@
 import React, { useState, useEffect } from "react";
 import { useAuth } from "../../../contexts/AuthContext";
 import { useEpccApi } from "../../../hooks/useEpccApi";
-import { useRouter } from "next/navigation";
-import { DashboardHeader } from "../../../components/layout/DashboardHeader";
-import { SidebarNavigation } from "../../../components/layout/SidebarNavigation";
+import { useRouter, useParams } from "next/navigation";
+import { ImageOverlay } from "../../../components/ui/ImageOverlay";
 import { useDashboard } from "../../../hooks/useDashboard";
 import { PcmProduct } from "@elasticpath/js-sdk";
 
-interface ProductEditPageProps {
-  params: {
-    productId: string;
-  };
-}
-
-export default function ProductEditPage({ params }: ProductEditPageProps) {
-  const { productId } = params;
-  const { user, isAuthenticated, loading, logout } = useAuth();
+export default function ProductDetailsPage({
+  params,
+}: {
+  params: { productId: string };
+}) {
+  const { user, isAuthenticated, loading } = useAuth();
   const router = useRouter();
+  const { productId } = params;
   const [product, setProduct] = useState<PcmProduct | null>(null);
+  const [mainImage, setMainImage] = useState<{
+    url: string;
+    alt: string;
+  } | null>(null);
+  const [selectedImage, setSelectedImage] = useState<{
+    url: string;
+    alt: string;
+  } | null>(null);
   const [productLoading, setProductLoading] = useState(false);
-  const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [formData, setFormData] = useState({
-    name: "",
-    description: "",
-    slug: "",
-    status: "draft",
-    commodity_type: "physical",
-    sku: "",
-  });
 
   // Use the same dashboard state management
-  const {
-    orgSearchTerm,
-    storeSearchTerm,
-    selectedOrgId,
-    selectedStoreId,
-    storeFilterMode,
-    organizationStores,
-    storesLoading,
-    handleOrgSelect,
-    handleStoreSelect,
-    setOrgSearchTerm,
-    setStoreSearchTerm,
-  } = useDashboard();
+  const { selectedOrgId, selectedStoreId, handleOrgSelect, handleStoreSelect } =
+    useDashboard();
 
   const { fetchProduct } = useEpccApi(
     selectedOrgId || undefined,
@@ -78,13 +63,12 @@ export default function ProductEditPage({ params }: ProductEditPageProps) {
 
       if (foundProduct) {
         setProduct(foundProduct);
-        setFormData({
-          name: foundProduct.attributes.name || "",
-          description: foundProduct.attributes.description || "",
-          slug: foundProduct.attributes.slug || "",
-          status: foundProduct.attributes.status || "draft",
-          commodity_type: foundProduct.attributes.commodity_type || "physical",
-          sku: foundProduct.attributes.sku || "",
+        // Assuming product has an 'attributes' object with 'name', 'description', 'slug', 'status', 'commodity_type', 'sku'
+        // and an 'images' array with a 'main' image.
+        // For now, we'll just set a placeholder image.
+        setMainImage({
+          url: "https://via.placeholder.com/150", // Placeholder image URL
+          alt: foundProduct.attributes.name || "Product Image",
         });
       } else {
         setError("Product not found");
@@ -95,59 +79,6 @@ export default function ProductEditPage({ params }: ProductEditPageProps) {
     } finally {
       setProductLoading(false);
     }
-  };
-
-  const handleInputChange = (
-    e: React.ChangeEvent<
-      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
-    >
-  ) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-  };
-
-  const handleSave = async () => {
-    if (!product) return;
-
-    setSaving(true);
-    setError(null);
-
-    try {
-      // Here you would typically call an API to update the product
-      // For now, we'll just simulate a save
-      console.log("Saving product:", { id: product.id, ...formData });
-
-      // Simulate API call delay
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-
-      // Update local state
-      setProduct((prev) =>
-        prev
-          ? {
-              ...prev,
-              attributes: {
-                ...prev.attributes,
-                ...formData,
-              },
-            }
-          : null
-      );
-
-      // Show success message (you could add a toast notification here)
-      alert("Product saved successfully!");
-    } catch (err) {
-      setError("Failed to save product");
-      console.error("Error saving product:", err);
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleCancel = () => {
-    router.push("/products");
   };
 
   if (loading) {
@@ -186,33 +117,7 @@ export default function ProductEditPage({ params }: ProductEditPageProps) {
 
   return (
     <div className="h-full flex flex-col bg-gray-50">
-      <DashboardHeader
-        user={user}
-        selectedOrgId={selectedOrgId}
-        selectedStoreId={selectedStoreId}
-        storeFilterMode={storeFilterMode}
-        organizationStores={organizationStores}
-        orgSearchTerm={orgSearchTerm}
-        storeSearchTerm={storeSearchTerm}
-        onOrgSearchChange={setOrgSearchTerm}
-        onStoreSearchChange={setStoreSearchTerm}
-        onOrgSelect={handleOrgSelect}
-        onStoreSelect={handleStoreSelect}
-        onLogout={logout}
-      />
-
       <div className="flex flex-1">
-        {selectedStoreId && (
-          <SidebarNavigation
-            activeSection="products"
-            onSectionChange={(section) => {
-              if (section !== "products") {
-                router.push("/");
-              }
-            }}
-          />
-        )}
-
         <main className="flex-1 overflow-auto bg-white">
           <div className="p-6 bg-white">
             <div className="w-full">
@@ -250,7 +155,7 @@ export default function ProductEditPage({ params }: ProductEditPageProps) {
                   </div>
                   <div className="flex space-x-3">
                     <button
-                      onClick={handleCancel}
+                      onClick={() => router.push("/products")}
                       className="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors duration-200"
                     >
                       <svg
@@ -269,11 +174,11 @@ export default function ProductEditPage({ params }: ProductEditPageProps) {
                       Cancel
                     </button>
                     <button
-                      onClick={handleSave}
-                      disabled={saving || productLoading}
+                      onClick={() => router.push(`/products/${productId}/edit`)}
+                      disabled={productLoading}
                       className="inline-flex items-center px-6 py-2 border border-transparent text-sm font-medium rounded-lg shadow-sm text-white bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
                     >
-                      {saving ? (
+                      {productLoading ? (
                         <>
                           <svg
                             className="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
@@ -397,12 +302,48 @@ export default function ProductEditPage({ params }: ProductEditPageProps) {
                   </div>
                 </div>
               ) : (
-                /* Product Edit Form */
+                /* Product Details */
                 <div className="bg-white border border-gray-200 rounded-xl shadow-sm">
                   <div className="px-6 py-8">
                     <div className="grid grid-cols-1 gap-8 sm:grid-cols-2">
-                      {/* Product Name */}
+                      {/* Main Image */}
                       <div className="sm:col-span-2">
+                        <label
+                          htmlFor="main-image"
+                          className="block text-sm font-semibold text-gray-700 mb-2"
+                        >
+                          Main Image
+                        </label>
+                        <div className="relative">
+                          <img
+                            src={
+                              mainImage?.url ||
+                              "https://via.placeholder.com/400x300"
+                            }
+                            alt={mainImage?.alt || "Product Image"}
+                            className="w-full h-auto rounded-lg object-cover cursor-pointer hover:opacity-90 transition-opacity"
+                            onClick={() => setSelectedImage(mainImage)}
+                          />
+                          <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                            <svg
+                              className="h-5 w-5 text-gray-400"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 10h.01M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l3 3m-3-3v12"
+                              />
+                            </svg>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Product Name */}
+                      <div>
                         <label
                           htmlFor="name"
                           className="block text-sm font-semibold text-gray-700 mb-2"
@@ -414,11 +355,11 @@ export default function ProductEditPage({ params }: ProductEditPageProps) {
                             type="text"
                             name="name"
                             id="name"
-                            value={formData.name}
-                            onChange={handleInputChange}
+                            value={product.attributes.name || ""}
                             className="block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors duration-200"
                             placeholder="Enter product name"
                             required
+                            disabled
                           />
                           <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
                             <svg
@@ -451,11 +392,11 @@ export default function ProductEditPage({ params }: ProductEditPageProps) {
                             type="text"
                             name="sku"
                             id="sku"
-                            value={formData.sku}
-                            onChange={handleInputChange}
+                            value={product.attributes.sku || ""}
                             className="block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors duration-200 font-mono"
                             placeholder="PROD-001"
                             required
+                            disabled
                           />
                           <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
                             <svg
@@ -488,10 +429,10 @@ export default function ProductEditPage({ params }: ProductEditPageProps) {
                             type="text"
                             name="slug"
                             id="slug"
-                            value={formData.slug}
-                            onChange={handleInputChange}
+                            value={product.attributes.slug || ""}
                             className="block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors duration-200"
                             placeholder="product-name"
+                            disabled
                           />
                           <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
                             <svg
@@ -523,9 +464,9 @@ export default function ProductEditPage({ params }: ProductEditPageProps) {
                           <select
                             name="status"
                             id="status"
-                            value={formData.status}
-                            onChange={handleInputChange}
+                            value={product.attributes.status || "draft"}
                             className="block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors duration-200 appearance-none bg-white"
+                            disabled
                           >
                             <option value="draft">Draft</option>
                             <option value="live">Live</option>
@@ -560,9 +501,11 @@ export default function ProductEditPage({ params }: ProductEditPageProps) {
                           <select
                             name="commodity_type"
                             id="commodity_type"
-                            value={formData.commodity_type}
-                            onChange={handleInputChange}
+                            value={
+                              product.attributes.commodity_type || "physical"
+                            }
                             className="block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors duration-200 appearance-none bg-white"
+                            disabled
                           >
                             <option value="physical">Physical</option>
                             <option value="digital">Digital</option>
@@ -598,10 +541,10 @@ export default function ProductEditPage({ params }: ProductEditPageProps) {
                             name="description"
                             id="description"
                             rows={4}
-                            value={formData.description}
-                            onChange={handleInputChange}
+                            value={product.attributes.description || ""}
                             className="block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors duration-200 resize-none"
                             placeholder="Enter product description..."
+                            disabled
                           />
                           <div className="absolute top-3 right-3 pointer-events-none">
                             <svg
@@ -628,6 +571,15 @@ export default function ProductEditPage({ params }: ProductEditPageProps) {
           </div>
         </main>
       </div>
+
+      {/* Image Overlay */}
+      {selectedImage && (
+        <ImageOverlay
+          imageUrl={selectedImage.url}
+          altText={selectedImage.alt}
+          onClose={() => setSelectedImage(null)}
+        />
+      )}
     </div>
   );
 }

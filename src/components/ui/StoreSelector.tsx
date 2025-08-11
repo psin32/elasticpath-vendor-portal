@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useRef, useEffect } from "react";
 import { StoreSelectorProps } from "../../types/dashboard";
 
 export const StoreSelector: React.FC<StoreSelectorProps> = ({
@@ -15,9 +15,32 @@ export const StoreSelector: React.FC<StoreSelectorProps> = ({
   storeFilterMode,
 }) => {
   const selectedStore = stores?.find((store) => store.id === selectedStoreId);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Handle click outside to close dropdown
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
+        if (isOpen) {
+          onToggle();
+        }
+      }
+    };
+
+    if (isOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [isOpen, onToggle]);
 
   return (
-    <div className="relative">
+    <div className="relative" ref={dropdownRef}>
       <button
         onClick={onToggle}
         disabled={disabled}

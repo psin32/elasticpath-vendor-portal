@@ -1,7 +1,5 @@
 // Layout Components
-export { Dashboard } from "./layout/Dashboard";
 export { DashboardHeader } from "./layout/DashboardHeader";
-export { DashboardContent } from "./layout/DashboardContent";
 export { SidebarNavigation } from "./layout/SidebarNavigation";
 
 // Form Components

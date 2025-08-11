@@ -16,26 +16,92 @@ export const useDashboard = () => {
   const [organizationStores, setOrganizationStores] = useState<any[]>([]);
   const [storesLoading, setStoresLoading] = useState(false);
 
-  // EPCC API hook
-  const { fetchStores } = useEpccApi(
-    selectedOrgId || undefined,
-    selectedStoreId || undefined
-  );
+  // EPCC API hook - don't pass dependencies to avoid circular issues
+  const { fetchOrgStores } = useEpccApi();
 
   // Fetch stores for a specific organization
-  const fetchOrganizationStores = async () => {
+  const fetchOrganizationStores = async (orgId: string) => {
+    console.log("fetchOrganizationStores called with orgId:", orgId);
     setStoresLoading(true);
     try {
-      const result = await fetchStores();
+      const result = await fetchOrgStores(orgId);
+      console.log("fetchOrgStores result:", result);
       if (result && result.data) {
+        console.log("Setting organization stores:", result.data);
         setOrganizationStores(result.data);
+        // Persist organization stores to localStorage with timestamp
+        const storeData = {
+          stores: result.data,
+          timestamp: Date.now(),
+          orgId: orgId,
+        };
+        localStorage.setItem(`org_stores_${orgId}`, JSON.stringify(storeData));
+      } else {
+        console.log("No result data, setting empty array");
+        setOrganizationStores([]);
+        const storeData = {
+          stores: [],
+          timestamp: Date.now(),
+          orgId: orgId,
+        };
+        localStorage.setItem(`org_stores_${orgId}`, JSON.stringify(storeData));
       }
     } catch (error) {
       console.error("Failed to fetch organization stores:", error);
       setOrganizationStores([]);
+      const storeData = {
+        stores: [],
+        timestamp: Date.now(),
+        orgId: orgId,
+      };
+      localStorage.setItem(`org_stores_${orgId}`, JSON.stringify(storeData));
     } finally {
       setStoresLoading(false);
     }
+  };
+
+  // Load organization stores from localStorage if available and not expired
+  const loadOrganizationStoresFromStorage = (orgId: string) => {
+    try {
+      const storedData = localStorage.getItem(`org_stores_${orgId}`);
+      if (storedData) {
+        const parsedData = JSON.parse(storedData);
+
+        // Check if the stored data is for the correct organization
+        if (parsedData.orgId !== orgId) {
+          console.log("Stored data is for different organization, clearing");
+          localStorage.removeItem(`org_stores_${orgId}`);
+          return false;
+        }
+
+        // Check if the stored data is not too old (24 hours)
+        const maxAge = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
+        const isExpired = Date.now() - parsedData.timestamp > maxAge;
+
+        if (isExpired) {
+          console.log(
+            "Stored organization stores are expired, will fetch fresh data"
+          );
+          localStorage.removeItem(`org_stores_${orgId}`);
+          return false;
+        }
+
+        console.log(
+          "Loading organization stores from localStorage:",
+          parsedData.stores
+        );
+        setOrganizationStores(parsedData.stores);
+        return true; // Indicates stores were loaded from storage
+      }
+    } catch (error) {
+      console.error(
+        "Failed to load organization stores from localStorage:",
+        error
+      );
+      // Clear corrupted data
+      localStorage.removeItem(`org_stores_${orgId}`);
+    }
+    return false; // Indicates no stores were found in storage
   };
 
   // Load selected org and store from localStorage on component mount
@@ -49,9 +115,19 @@ export const useDashboard = () => {
       setSelectedOrgId(savedOrgId);
       setStoreFilterMode(savedFilterMode);
       setActiveSection("stores");
+
+      // Try to load organization stores from localStorage first
+      const storesLoadedFromStorage =
+        loadOrganizationStoresFromStorage(savedOrgId);
+
+      // If no stores in localStorage, fetch them from API
+      if (!storesLoadedFromStorage) {
+        console.log("No stores found in localStorage, fetching from API");
+        fetchOrganizationStores(savedOrgId);
+      }
+
       if (savedFilterMode === "organization") {
         setStoreSearchTerm(savedOrgId);
-        fetchOrganizationStores();
       }
     }
 
@@ -62,16 +138,34 @@ export const useDashboard = () => {
 
   // Handle organization selection
   const handleOrgSelect = async (orgId: string) => {
-    setSelectedOrgId(orgId);
-    localStorage.setItem("selected_org_id", orgId);
-    setSelectedStoreId(null);
-    localStorage.removeItem("selected_store_id");
-    setActiveSection("stores");
-    setStoreFilterMode("organization");
-    localStorage.setItem("store_filter_mode", "organization");
-    setStoreSearchTerm(orgId);
-    await fetchOrganizationStores();
+    console.log("handleOrgSelect called with orgId:", orgId);
+
+    // Check if this is a different organization
+    if (selectedOrgId !== orgId) {
+      setSelectedOrgId(orgId);
+      localStorage.setItem("selected_org_id", orgId);
+      setSelectedStoreId(null);
+      localStorage.removeItem("selected_store_id");
+      setActiveSection("stores");
+      setStoreSearchTerm("");
+
+      // Try to load organization stores from localStorage first
+      const storesLoadedFromStorage = loadOrganizationStoresFromStorage(orgId);
+
+      // If no stores in localStorage, fetch them from API
+      if (!storesLoadedFromStorage) {
+        console.log("No stores found in localStorage, fetching from API");
+        await fetchOrganizationStores(orgId);
+      } else {
+        console.log("Organization stores loaded from localStorage");
+      }
+    }
   };
+
+  // Debug: Monitor organizationStores changes
+  useEffect(() => {
+    console.log("organizationStores state changed:", organizationStores);
+  }, [organizationStores]);
 
   // Handle store selection
   const handleStoreSelect = (storeId: string) => {
@@ -84,10 +178,7 @@ export const useDashboard = () => {
     setStoreFilterMode(mode);
     localStorage.setItem("store_filter_mode", mode);
     setStoreSearchTerm("");
-
-    if (mode === "organization" && selectedOrgId) {
-      await fetchOrganizationStores();
-    }
+    // Don't automatically fetch organization stores - this is handled separately
   };
 
   // Clear all selections
@@ -99,6 +190,22 @@ export const useDashboard = () => {
     localStorage.removeItem("selected_store_id");
     localStorage.setItem("store_filter_mode", "all");
     setStoreSearchTerm("");
+    setOrganizationStores([]);
+  };
+
+  // Clear organization stores for a specific organization
+  const clearOrganizationStores = (orgId: string) => {
+    localStorage.removeItem(`org_stores_${orgId}`);
+    setOrganizationStores([]);
+  };
+
+  // Refresh organization stores (force fetch from API)
+  const refreshOrganizationStores = async (orgId: string) => {
+    console.log("Force refreshing organization stores for orgId:", orgId);
+    // Clear stored data first
+    localStorage.removeItem(`org_stores_${orgId}`);
+    // Fetch fresh data
+    await fetchOrganizationStores(orgId);
   };
 
   return {
@@ -122,5 +229,8 @@ export const useDashboard = () => {
     handleStoreSelect,
     handleFilterModeToggle,
     clearSelections,
+    clearOrganizationStores,
+    refreshOrganizationStores,
+    fetchOrganizationStores: (orgId: string) => fetchOrganizationStores(orgId),
   };
 };

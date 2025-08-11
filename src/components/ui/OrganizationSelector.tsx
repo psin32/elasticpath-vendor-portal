@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useRef, useEffect } from "react";
 import { OrganizationSelectorProps } from "../../types/dashboard";
 
 export const OrganizationSelector: React.FC<OrganizationSelectorProps> = ({
@@ -13,9 +13,37 @@ export const OrganizationSelector: React.FC<OrganizationSelectorProps> = ({
   onToggle,
 }) => {
   const selectedOrg = organizations?.find((org) => org.id === selectedOrgId);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Handle click outside to close dropdown
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
+        if (isOpen) {
+          onToggle();
+        }
+      }
+    };
+
+    if (isOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [isOpen, onToggle]);
+
+  const handleOrgSelect = async (orgId: string) => {
+    await onOrgSelect(orgId);
+    onToggle(); // Close dropdown after organization selection
+  };
 
   return (
-    <div className="relative">
+    <div className="relative" ref={dropdownRef}>
       <button
         onClick={onToggle}
         className="flex items-center space-x-2 px-3 py-2 border border-gray-300 rounded-md bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500"
@@ -73,10 +101,7 @@ export const OrganizationSelector: React.FC<OrganizationSelectorProps> = ({
               .map((org) => (
                 <button
                   key={org.id}
-                  onClick={() => {
-                    onOrgSelect(org.id);
-                    onToggle();
-                  }}
+                  onClick={() => handleOrgSelect(org.id)}
                   className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 flex items-center justify-between"
                 >
                   <span className="truncate">{org.name}</span>

@@ -70,6 +70,31 @@ export const useEpccApi = (orgId?: string, storeId?: string) => {
   }, [apiCall]);
 
   /**
+   * Fetch stores
+   */
+  const fetchOrgStores = useCallback(
+    async (orgId: string) => {
+      return apiCall(async (client) => {
+        // Use the SDK's request method for user stores
+
+        return await client.request.send(
+          "stores",
+          "GET",
+          undefined,
+          undefined,
+          client,
+          false,
+          "v2",
+          {
+            "EP-ORG-ID": orgId,
+          }
+        );
+      }, "Failed to fetch stores");
+    },
+    [apiCall]
+  );
+
+  /**
    * Fetch organization by ID
    */
   const fetchOrganization = useCallback(
@@ -248,6 +273,7 @@ export const useEpccApi = (orgId?: string, storeId?: string) => {
     fetchCatalogs,
     fetchUserProfile,
     fetchUserRole,
+    fetchOrgStores,
 
     // Utility methods
     clearApiError: () => setApiError(null),

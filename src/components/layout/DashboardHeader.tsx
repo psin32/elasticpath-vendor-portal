@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { DashboardHeaderProps } from "../../types/dashboard";
 import { OrganizationSelector } from "../ui/OrganizationSelector";
 import { StoreSelector } from "../ui/StoreSelector";
+import EpLogo from "../ui/ep-logo";
 
 export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
   user,
@@ -12,12 +13,12 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
   selectedStoreId,
   storeFilterMode,
   organizationStores,
+  storesLoading,
   orgSearchTerm,
-  storeSearchTerm,
   onOrgSearchChange,
-  onStoreSearchChange,
   onOrgSelect,
   onStoreSelect,
+  onFetchOrganizationStores,
   onLogout,
 }) => {
   const router = useRouter();
@@ -29,9 +30,7 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
       <div className="w-full px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center py-4">
           <div className="flex items-center space-x-6">
-            <h1 className="text-xl font-bold text-gray-900">
-              Elastic Path Admin Portal
-            </h1>
+            <EpLogo className="w-40" />
 
             <OrganizationSelector
               organizations={user.organizations || []}
@@ -43,21 +42,59 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
               onToggle={() => setShowOrgSelector(!showOrgSelector)}
             />
 
-            <StoreSelector
-              stores={
-                storeFilterMode === "organization"
-                  ? organizationStores
-                  : user.stores || []
-              }
-              selectedStoreId={selectedStoreId}
-              searchTerm={storeSearchTerm}
-              onSearchChange={onStoreSearchChange}
-              onStoreSelect={onStoreSelect}
-              isOpen={showStoreSelector}
-              onToggle={() => setShowStoreSelector(!showStoreSelector)}
-              disabled={!selectedOrgId && storeFilterMode === "organization"}
-              storeFilterMode={storeFilterMode}
-            />
+            {/* Show store selector only when an organization is selected */}
+            {selectedOrgId && (
+              <div className="flex items-center space-x-2">
+                <span className="text-sm text-gray-500">→</span>
+                <StoreSelector
+                  stores={organizationStores}
+                  selectedStoreId={selectedStoreId}
+                  searchTerm=""
+                  onSearchChange={() => {}}
+                  onStoreSelect={onStoreSelect}
+                  isOpen={showStoreSelector}
+                  onToggle={() => setShowStoreSelector(!showStoreSelector)}
+                  disabled={false}
+                  storeFilterMode="all"
+                />
+                {organizationStores.length === 0 && !storesLoading && (
+                  <span className="text-xs text-gray-400 italic">
+                    No stores found
+                  </span>
+                )}
+                {storesLoading && (
+                  <span className="text-xs text-blue-500 italic">
+                    Loading stores...
+                  </span>
+                )}
+                {organizationStores.length > 0 && !storesLoading && (
+                  <div className="flex items-center space-x-1">
+                    <span className="text-xs text-green-500">
+                      ✓ {organizationStores.length} stores
+                    </span>
+                    <button
+                      onClick={() => onFetchOrganizationStores?.(selectedOrgId)}
+                      className="text-xs text-gray-400 hover:text-gray-600 transition-colors"
+                      title="Refresh stores"
+                    >
+                      <svg
+                        className="w-3 h-3"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                        />
+                      </svg>
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           <div className="flex items-center space-x-4">

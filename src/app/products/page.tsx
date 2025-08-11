@@ -5,13 +5,11 @@ import { useAuth } from "../../contexts/AuthContext";
 import { useEpccApi } from "../../hooks/useEpccApi";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ImageOverlay } from "../../components/ui/ImageOverlay";
-import { DashboardHeader } from "../../components/layout/DashboardHeader";
-import { SidebarNavigation } from "../../components/layout/SidebarNavigation";
 import { useDashboard } from "../../hooks/useDashboard";
 import { PcmProduct } from "@elasticpath/js-sdk";
 
 export default function ProductsPage() {
-  const { user, isAuthenticated, loading, logout } = useAuth();
+  const { user, isAuthenticated, loading } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
   const [products, setProducts] = useState<PcmProduct[]>([]);
@@ -32,19 +30,8 @@ export default function ProductsPage() {
   });
 
   // Use the same dashboard state management
-  const {
-    orgSearchTerm,
-    storeSearchTerm,
-    selectedOrgId,
-    selectedStoreId,
-    storeFilterMode,
-    organizationStores,
-    storesLoading,
-    handleOrgSelect,
-    handleStoreSelect,
-    setOrgSearchTerm,
-    setStoreSearchTerm,
-  } = useDashboard();
+  const { selectedOrgId, selectedStoreId, handleOrgSelect, handleStoreSelect } =
+    useDashboard();
 
   const { fetchProducts } = useEpccApi(
     selectedOrgId || undefined,
@@ -186,33 +173,7 @@ export default function ProductsPage() {
           onClose={() => setSelectedImage(null)}
         />
       )}
-      <DashboardHeader
-        user={user}
-        selectedOrgId={selectedOrgId}
-        selectedStoreId={selectedStoreId}
-        storeFilterMode={storeFilterMode}
-        organizationStores={organizationStores}
-        orgSearchTerm={orgSearchTerm}
-        storeSearchTerm={storeSearchTerm}
-        onOrgSearchChange={setOrgSearchTerm}
-        onStoreSearchChange={setStoreSearchTerm}
-        onOrgSelect={handleOrgSelect}
-        onStoreSelect={handleStoreSelect}
-        onLogout={logout}
-      />
-
       <div className="flex flex-1">
-        {selectedStoreId && (
-          <SidebarNavigation
-            activeSection="products"
-            onSectionChange={(section) => {
-              if (section !== "products") {
-                router.push("/");
-              }
-            }}
-          />
-        )}
-
         <main className="flex-1 overflow-auto bg-white">
           <div className="p-6 bg-white">
             <div className="w-full">

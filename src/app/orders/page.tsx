@@ -4,8 +4,6 @@ import React, { useState, useEffect } from "react";
 import { useAuth } from "../../contexts/AuthContext";
 import { useEpccApi } from "../../hooks/useEpccApi";
 import { useRouter, useSearchParams } from "next/navigation";
-import { DashboardHeader } from "../../components/layout/DashboardHeader";
-import { SidebarNavigation } from "../../components/layout/SidebarNavigation";
 import { useDashboard } from "../../hooks/useDashboard";
 import { Order } from "@elasticpath/js-sdk";
 
@@ -27,7 +25,7 @@ interface PaginationInfo {
 }
 
 export default function OrdersPage() {
-  const { user, isAuthenticated, loading, logout } = useAuth();
+  const { user, isAuthenticated, loading } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
   const [orders, setOrders] = useState<Order[]>([]);
@@ -43,19 +41,8 @@ export default function OrdersPage() {
   });
 
   // Use the same dashboard state management
-  const {
-    orgSearchTerm,
-    storeSearchTerm,
-    selectedOrgId,
-    selectedStoreId,
-    storeFilterMode,
-    organizationStores,
-    storesLoading,
-    handleOrgSelect,
-    handleStoreSelect,
-    setOrgSearchTerm,
-    setStoreSearchTerm,
-  } = useDashboard();
+  const { selectedOrgId, selectedStoreId, handleOrgSelect, handleStoreSelect } =
+    useDashboard();
 
   const { fetchOrders } = useEpccApi(
     selectedOrgId || undefined,
@@ -211,33 +198,7 @@ export default function OrdersPage() {
 
   return (
     <div className="h-full flex flex-col bg-gray-50">
-      <DashboardHeader
-        user={user}
-        selectedOrgId={selectedOrgId}
-        selectedStoreId={selectedStoreId}
-        storeFilterMode={storeFilterMode}
-        organizationStores={organizationStores}
-        orgSearchTerm={orgSearchTerm}
-        storeSearchTerm={storeSearchTerm}
-        onOrgSearchChange={setOrgSearchTerm}
-        onStoreSearchChange={setStoreSearchTerm}
-        onOrgSelect={handleOrgSelect}
-        onStoreSelect={handleStoreSelect}
-        onLogout={logout}
-      />
-
       <div className="flex flex-1">
-        {selectedStoreId && (
-          <SidebarNavigation
-            activeSection="orders"
-            onSectionChange={(section) => {
-              if (section !== "orders") {
-                router.push("/");
-              }
-            }}
-          />
-        )}
-
         <main className="flex-1 overflow-auto bg-white">
           <div className="p-6 bg-white">
             <div className="w-full">

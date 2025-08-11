@@ -1,69 +1,29 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect } from "react";
 import { useAuth } from "../../../contexts/AuthContext";
 import { useEpccApi } from "../../../hooks/useEpccApi";
-import { useRouter } from "next/navigation";
-import { DashboardHeader } from "../../../components/layout/DashboardHeader";
-import { SidebarNavigation } from "../../../components/layout/SidebarNavigation";
+import { useRouter, useParams } from "next/navigation";
 import { useDashboard } from "../../../hooks/useDashboard";
 import { Order, OrderItem } from "@elasticpath/js-sdk";
-import { OrderItemPromotions } from "../../../components/orders/OrderItemPromotions";
 
-interface OrderDetailsPageProps {
-  params: {
-    orderId: string;
-  };
-}
-
-// Type guard to ensure compatibility
-const isOrder = (obj: any): obj is Order => {
-  return obj && obj.id && typeof obj.id === "string";
-};
-
-// Cast function to handle SDK type mismatch
-const castToOrder = (sdkOrder: any): Order => {
-  return sdkOrder as Order;
-};
-
-export default function OrderDetailsPage({ params }: OrderDetailsPageProps) {
-  const { orderId } = params;
-  const { user, isAuthenticated, loading, logout } = useAuth();
+export default function OrderDetailsPage({
+  params,
+}: {
+  params: { orderId: string };
+}) {
+  const { user, isAuthenticated, loading } = useAuth();
   const router = useRouter();
-  const [order, setOrder] = useState<Order | null>(null);
-  const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
-  const [promotions, setPromotions] = useState<any[]>([]);
-  const [shippingGroups, setShippingGroups] = useState<any[]>([]);
+  const { orderId } = params;
+  const [order, setOrder] = useState<(Order & { included?: any }) | null>(null);
   const [orderLoading, setOrderLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Group items by shipping group
-  const itemsByShippingGroup = useMemo(() => {
-    const groups: Record<string, OrderItem[]> = {};
-    orderItems.forEach((item) => {
-      const groupId = item.shipping_group_id || "__no_group__";
-      if (!groups[groupId]) groups[groupId] = [];
-      groups[groupId].push(item);
-    });
-    return groups;
-  }, [orderItems]);
-
   // Use the same dashboard state management
-  const {
-    orgSearchTerm,
-    storeSearchTerm,
-    selectedOrgId,
-    selectedStoreId,
-    storeFilterMode,
-    organizationStores,
-    storesLoading,
-    handleOrgSelect,
-    handleStoreSelect,
-    setOrgSearchTerm,
-    setStoreSearchTerm,
-  } = useDashboard();
+  const { selectedOrgId, selectedStoreId, handleOrgSelect, handleStoreSelect } =
+    useDashboard();
 
-  const { fetchOrder, fetchShippingGroups } = useEpccApi(
+  const { fetchOrder } = useEpccApi(
     selectedOrgId || undefined,
     selectedStoreId || undefined
   );
@@ -93,28 +53,6 @@ export default function OrderDetailsPage({ params }: OrderDetailsPageProps) {
       const orderData = await fetchOrder(orderId);
       if (orderData) {
         setOrder(orderData.data);
-
-        // Extract order items if available, excluding promotion_items
-        if (orderData.included?.items) {
-          const items = orderData.included?.items
-            .filter((item: any) => item.type !== "promotion_item")
-            .map((item: any) => item as OrderItem);
-          setOrderItems(items);
-        }
-
-        // Extract promotions if available
-        if (orderData.included && "promotions" in orderData.included) {
-          setPromotions((orderData.included as any).promotions || []);
-        }
-
-        // Fetch shipping groups
-        try {
-          const shippingGroupsData = await fetchShippingGroups(orderId);
-          setShippingGroups(shippingGroupsData.data || []);
-        } catch (err) {
-          console.warn("Failed to fetch shipping groups:", err);
-          setShippingGroups([]);
-        }
       }
     } catch (err) {
       setError("Failed to load order details");
@@ -196,33 +134,7 @@ export default function OrderDetailsPage({ params }: OrderDetailsPageProps) {
 
   return (
     <div className="h-full flex flex-col bg-gray-50">
-      <DashboardHeader
-        user={user}
-        selectedOrgId={selectedOrgId}
-        selectedStoreId={selectedStoreId}
-        storeFilterMode={storeFilterMode}
-        organizationStores={organizationStores}
-        orgSearchTerm={orgSearchTerm}
-        storeSearchTerm={storeSearchTerm}
-        onOrgSearchChange={setOrgSearchTerm}
-        onStoreSearchChange={setStoreSearchTerm}
-        onOrgSelect={handleOrgSelect}
-        onStoreSelect={handleStoreSelect}
-        onLogout={logout}
-      />
-
       <div className="flex flex-1">
-        {selectedStoreId && (
-          <SidebarNavigation
-            activeSection="orders"
-            onSectionChange={(section) => {
-              if (section !== "orders") {
-                router.push("/");
-              }
-            }}
-          />
-        )}
-
         <main className="flex-1 overflow-auto bg-white">
           <div className="p-6 bg-white">
             <div className="w-full">
@@ -393,163 +305,68 @@ export default function OrderDetailsPage({ params }: OrderDetailsPageProps) {
                           </h2>
                         </div>
                         <div className="divide-y divide-gray-200">
-                          {orderItems.length > 0 ? (
-                            Object.entries(itemsByShippingGroup).map(
-                              ([groupId, items]) => {
-                                const shippingGroup = shippingGroups.find(
-                                  (g) => g.id === groupId
-                                );
-                                return (
-                                  <div
-                                    key={groupId}
-                                    className="divide-y divide-gray-200"
-                                  >
-                                    {/* Shipping Group Header */}
-                                    {groupId !== "__no_group__" &&
-                                      shippingGroup && (
-                                        <div className="px-6 py-4 bg-gray-50">
-                                          <div className="flex flex-col gap-2">
-                                            <div className="flex items-center justify-between">
-                                              <h3 className="text-sm font-medium text-gray-900">
-                                                Shipping Group
-                                              </h3>
-                                              <span className="text-xs text-gray-500">
-                                                {shippingGroup.created_at
-                                                  ? formatDate(
-                                                      shippingGroup.created_at
-                                                    )
-                                                  : ""}
-                                              </span>
-                                            </div>
-                                            <div className="flex flex-wrap gap-4 text-sm text-gray-600">
-                                              {shippingGroup.shipping_type && (
-                                                <span>
-                                                  Type:{" "}
-                                                  <span className="font-medium text-gray-900">
-                                                    {
-                                                      shippingGroup.shipping_type
-                                                    }
-                                                  </span>
-                                                </span>
-                                              )}
-                                              {shippingGroup.meta
-                                                ?.shipping_display_price?.total
-                                                ?.formatted && (
-                                                <span>
-                                                  Shipping:{" "}
-                                                  <span className="font-medium text-gray-900">
-                                                    {
-                                                      shippingGroup.meta
-                                                        .shipping_display_price
-                                                        .total.formatted
-                                                    }
-                                                  </span>
-                                                </span>
-                                              )}
-                                              {shippingGroup.tracking_reference && (
-                                                <span>
-                                                  Tracking:{" "}
-                                                  <span className="font-medium text-gray-900">
-                                                    {
-                                                      shippingGroup.tracking_reference
-                                                    }
-                                                  </span>
-                                                </span>
-                                              )}
-                                              {shippingGroup.address && (
-                                                <span className="text-sm text-gray-600">
-                                                  {[
-                                                    shippingGroup.address
-                                                      .first_name +
-                                                      " " +
-                                                      shippingGroup.address
-                                                        .last_name,
-                                                    shippingGroup.address
-                                                      .line_1,
-                                                    shippingGroup.address
-                                                      .line_2,
-                                                    shippingGroup.address.city,
-                                                    shippingGroup.address
-                                                      .region,
-                                                    shippingGroup.address
-                                                      .postcode,
-                                                    shippingGroup.address
-                                                      .country,
-                                                  ]
-                                                    .filter(Boolean)
-                                                    .join(", ")}
-                                                </span>
-                                              )}
-                                            </div>
-                                          </div>
-                                        </div>
-                                      )}
-                                    {/* Order Items */}
-                                    {items.map((item, index) => (
-                                      <div key={index} className="p-6">
-                                        <div className="flex items-center space-x-4">
-                                          <div className="flex-shrink-0">
-                                            <div className="w-16 h-16 bg-gray-100 rounded-lg flex items-center justify-center">
-                                              <svg
-                                                className="w-8 h-8 text-gray-400"
-                                                fill="none"
-                                                stroke="currentColor"
-                                                viewBox="0 0 24 24"
-                                              >
-                                                <path
-                                                  strokeLinecap="round"
-                                                  strokeLinejoin="round"
-                                                  strokeWidth={2}
-                                                  d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
-                                                />
-                                              </svg>
-                                            </div>
-                                          </div>
-                                          <div className="flex-1 min-w-0">
-                                            <p className="text-sm font-medium text-gray-900 truncate">
-                                              {item.name || `Item ${index + 1}`}
-                                            </p>
-                                            <p className="text-sm text-gray-500">
-                                              Quantity: {item.quantity || 1}
-                                            </p>
-                                            {item.sku && (
-                                              <p className="text-sm text-gray-500">
-                                                SKU: {item.sku}
-                                              </p>
-                                            )}
-                                            <OrderItemPromotions
-                                              item={item}
-                                              promotions={promotions}
-                                            />
-                                          </div>
-                                          <div className="text-right flex flex-col">
-                                            <p className="text-sm font-medium text-gray-900">
-                                              {
-                                                item.meta?.display_price
-                                                  ?.with_tax?.value.formatted
-                                              }
-                                            </p>
-                                            {item.meta?.display_price
-                                              ?.without_discount?.value
-                                              .amount !==
-                                              item.meta?.display_price?.with_tax
-                                                ?.value.amount && (
-                                              <p className="text-sm text-gray-500 line-through">
-                                                {
-                                                  item.meta?.display_price
-                                                    ?.without_discount?.value
-                                                    .formatted
-                                                }
-                                              </p>
-                                            )}
-                                          </div>
-                                        </div>
+                          {order.included?.items.length > 0 ? (
+                            order.included.items
+                              .filter(
+                                (item: any) => item.type !== "promotion_item"
+                              )
+                              .map((item: any) => item as OrderItem)
+                              .map((item: OrderItem, index: number) => (
+                                <div key={index} className="p-6">
+                                  <div className="flex items-center space-x-4">
+                                    <div className="flex-shrink-0">
+                                      <div className="w-16 h-16 bg-gray-100 rounded-lg flex items-center justify-center">
+                                        <svg
+                                          className="w-8 h-8 text-gray-400"
+                                          fill="none"
+                                          stroke="currentColor"
+                                          viewBox="0 0 24 24"
+                                        >
+                                          <path
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                            strokeWidth={2}
+                                            d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
+                                          />
+                                        </svg>
                                       </div>
-                                    ))}
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                      <p className="text-sm font-medium text-gray-900 truncate">
+                                        {item.name || `Item ${index + 1}`}
+                                      </p>
+                                      <p className="text-sm text-gray-500">
+                                        Quantity: {item.quantity || 1}
+                                      </p>
+                                      {item.sku && (
+                                        <p className="text-sm text-gray-500">
+                                          SKU: {item.sku}
+                                        </p>
+                                      )}
+                                    </div>
+                                    <div className="text-right flex flex-col">
+                                      <p className="text-sm font-medium text-gray-900">
+                                        {
+                                          item.meta?.display_price?.with_tax
+                                            ?.value.formatted
+                                        }
+                                      </p>
+                                      {item.meta?.display_price
+                                        ?.without_discount?.value.amount !==
+                                        item.meta?.display_price?.with_tax
+                                          ?.value.amount && (
+                                        <p className="text-sm text-gray-500 line-through">
+                                          {
+                                            item.meta?.display_price
+                                              ?.without_discount?.value
+                                              .formatted
+                                          }
+                                        </p>
+                                      )}
+                                    </div>
                                   </div>
-                                );
-                              }
-                            )
+                                </div>
+                              ))
                           ) : (
                             <div className="p-6 text-center text-gray-500">
                               No items found for this order
@@ -643,7 +460,7 @@ export default function OrderDetailsPage({ params }: OrderDetailsPageProps) {
                           )}
                           {/* Only show shipping address if no shipping groups exist */}
                           {order.shipping_address &&
-                            shippingGroups.length === 0 && (
+                            order.included?.shipping_groups.length === 0 && (
                               <div>
                                 <p className="text-sm font-medium text-gray-900">
                                   Shipping Address

@@ -142,6 +142,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     localStorage.removeItem("epcc_access_token");
     localStorage.removeItem("epcc_refresh_token");
     localStorage.removeItem("epcc_user");
+    localStorage.removeItem("selected_org_id");
+    localStorage.removeItem("selected_store_id");
+    localStorage.removeItem("epCredentials");
   };
 
   const value: AuthContextType = {

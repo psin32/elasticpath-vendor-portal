@@ -14,7 +14,7 @@ export interface OrganizationSelectorProps {
   selectedOrgId: string | null;
   searchTerm: string;
   onSearchChange: (value: string) => void;
-  onOrgSelect: (orgId: string) => void;
+  onOrgSelect: (orgId: string) => Promise<void>;
   isOpen: boolean;
   onToggle: () => void;
 }
@@ -42,12 +42,12 @@ export interface DashboardHeaderProps {
   selectedStoreId: string | null;
   storeFilterMode: StoreFilterMode;
   organizationStores: any[];
+  storesLoading: boolean;
   orgSearchTerm: string;
-  storeSearchTerm: string;
   onOrgSearchChange: (value: string) => void;
-  onStoreSearchChange: (value: string) => void;
-  onOrgSelect: (orgId: string) => void;
+  onOrgSelect: (orgId: string) => Promise<void>;
   onStoreSelect: (storeId: string) => void;
+  onFetchOrganizationStores?: (orgId: string) => void;
   onLogout: () => void;
 }
 
@@ -60,10 +60,8 @@ export interface DashboardContentProps {
   storesLoading: boolean;
   storeFilterMode: StoreFilterMode;
   orgSearchTerm: string;
-  storeSearchTerm: string;
   onOrgSearchChange: (value: string) => void;
-  onStoreSearchChange: (value: string) => void;
-  onOrgSelect: (orgId: string) => void;
+  onOrgSelect: (orgId: string) => Promise<void>;
   onStoreSelect: (storeId: string) => void;
-  onFilterModeToggle: (mode: StoreFilterMode) => void;
+  onFilterModeToggle: (mode: StoreFilterMode) => Promise<void>;
 }

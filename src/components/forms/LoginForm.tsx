@@ -32,7 +32,7 @@ export default function LoginForm() {
         <div className="mx-auto w-full max-w-sm lg:w-96">
           <div>
             {/* Modern Logo */}
-            <div className="flex items-center justify-center w-16 h-16 mx-auto bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 rounded-2xl shadow-lg">
+            <div className="flex items-center justify-center w-16 h-16 mx-auto bg-gradient-to-br from-[#990033] via-[#e6034b] to-pink-500 rounded-2xl shadow-lg">
               <svg
                 className="w-8 h-8 text-white"
                 fill="none"
@@ -52,9 +52,6 @@ export default function LoginForm() {
             <h2 className="mt-8 text-3xl font-bold tracking-tight text-gray-900 text-center">
               Welcome back
             </h2>
-            <p className="mt-3 text-sm text-gray-600 text-center">
-              Sign in to your Elastic Path admin account
-            </p>
           </div>
 
           <div className="mt-10">
@@ -205,7 +202,7 @@ export default function LoginForm() {
                 <button
                   type="submit"
                   disabled={loading}
-                  className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-lg text-white bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed transform transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] shadow-lg hover:shadow-xl"
+                  className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-lg text-white bg-gradient-to-r from-[#990033] to-pink-500 hover:from-[#990033] hover:to-pink-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#990033] disabled:opacity-50 disabled:cursor-not-allowed transform transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] shadow-lg hover:shadow-xl"
                 >
                   <span className="absolute left-0 inset-y-0 flex items-center pl-3">
                     {loading ? (
@@ -249,26 +246,13 @@ export default function LoginForm() {
                 </button>
               </div>
             </form>
-
-            <div className="mt-8">
-              <div className="relative">
-                <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-gray-300" />
-                </div>
-                <div className="relative flex justify-center text-sm">
-                  <span className="px-2 bg-white text-gray-500">
-                    Secure login powered by Elastic Path
-                  </span>
-                </div>
-              </div>
-            </div>
           </div>
         </div>
       </div>
 
       {/* Right side - Visual/Branding */}
       <div className="hidden lg:block relative w-0 flex-1">
-        <div className="absolute inset-0 bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-600">
+        <div className="absolute inset-0 bg-gradient-to-br from-[#990033]  to-pink-400">
           <div className="absolute inset-0 bg-black opacity-20"></div>
           <div className="relative h-full flex items-center justify-center p-12">
             <div className="text-center text-white">
@@ -289,11 +273,7 @@ export default function LoginForm() {
                   </svg>
                 </div>
               </div>
-              <h1 className="text-4xl font-bold mb-4">
-                Elastic Path
-                <br />
-                Admin Portal
-              </h1>
+              <h1 className="text-4xl font-bold mb-4">Vendor Portal</h1>
               <p className="text-xl text-white text-opacity-90 mb-8">
                 Manage your organizations and stores with powerful, intuitive
                 tools
