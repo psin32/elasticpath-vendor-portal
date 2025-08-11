@@ -30,8 +30,6 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
     setActiveSection,
     setOrgSearchTerm,
   } = useDashboard();
-  console.log("organizationStores", organizationStores);
-  console.log("selectedOrgId", selectedOrgId);
 
   // Show loading state
   if (loading) {

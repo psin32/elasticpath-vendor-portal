@@ -21,13 +21,10 @@ export const useDashboard = () => {
 
   // Fetch stores for a specific organization
   const fetchOrganizationStores = async (orgId: string) => {
-    console.log("fetchOrganizationStores called with orgId:", orgId);
     setStoresLoading(true);
     try {
       const result = await fetchOrgStores(orgId);
-      console.log("fetchOrgStores result:", result);
       if (result && result.data) {
-        console.log("Setting organization stores:", result.data);
         setOrganizationStores(result.data);
         // Persist organization stores to localStorage with timestamp
         const storeData = {
@@ -37,7 +34,6 @@ export const useDashboard = () => {
         };
         localStorage.setItem(`org_stores_${orgId}`, JSON.stringify(storeData));
       } else {
-        console.log("No result data, setting empty array");
         setOrganizationStores([]);
         const storeData = {
           stores: [],
@@ -69,7 +65,6 @@ export const useDashboard = () => {
 
         // Check if the stored data is for the correct organization
         if (parsedData.orgId !== orgId) {
-          console.log("Stored data is for different organization, clearing");
           localStorage.removeItem(`org_stores_${orgId}`);
           return false;
         }
@@ -79,17 +74,10 @@ export const useDashboard = () => {
         const isExpired = Date.now() - parsedData.timestamp > maxAge;
 
         if (isExpired) {
-          console.log(
-            "Stored organization stores are expired, will fetch fresh data"
-          );
           localStorage.removeItem(`org_stores_${orgId}`);
           return false;
         }
 
-        console.log(
-          "Loading organization stores from localStorage:",
-          parsedData.stores
-        );
         setOrganizationStores(parsedData.stores);
         return true; // Indicates stores were loaded from storage
       }
@@ -122,7 +110,6 @@ export const useDashboard = () => {
 
       // If no stores in localStorage, fetch them from API
       if (!storesLoadedFromStorage) {
-        console.log("No stores found in localStorage, fetching from API");
         fetchOrganizationStores(savedOrgId);
       }
 
@@ -138,8 +125,6 @@ export const useDashboard = () => {
 
   // Handle organization selection
   const handleOrgSelect = async (orgId: string) => {
-    console.log("handleOrgSelect called with orgId:", orgId);
-
     // Check if this is a different organization
     if (selectedOrgId !== orgId) {
       setSelectedOrgId(orgId);
@@ -154,23 +139,28 @@ export const useDashboard = () => {
 
       // If no stores in localStorage, fetch them from API
       if (!storesLoadedFromStorage) {
-        console.log("No stores found in localStorage, fetching from API");
         await fetchOrganizationStores(orgId);
-      } else {
-        console.log("Organization stores loaded from localStorage");
       }
+
+      // Small delay to ensure localStorage is updated and user sees the selection
+      setTimeout(() => {
+        window.location.reload();
+      }, 100);
     }
   };
 
-  // Debug: Monitor organizationStores changes
-  useEffect(() => {
-    console.log("organizationStores state changed:", organizationStores);
-  }, [organizationStores]);
-
   // Handle store selection
   const handleStoreSelect = (storeId: string) => {
-    setSelectedStoreId(storeId);
-    localStorage.setItem("selected_store_id", storeId);
+    // Check if this is a different store
+    if (selectedStoreId !== storeId) {
+      setSelectedStoreId(storeId);
+      localStorage.setItem("selected_store_id", storeId);
+
+      // Small delay to ensure localStorage is updated and user sees the selection
+      setTimeout(() => {
+        window.location.reload();
+      }, 100);
+    }
   };
 
   // Handle filter mode toggle
@@ -201,7 +191,6 @@ export const useDashboard = () => {
 
   // Refresh organization stores (force fetch from API)
   const refreshOrganizationStores = async (orgId: string) => {
-    console.log("Force refreshing organization stores for orgId:", orgId);
     // Clear stored data first
     localStorage.removeItem(`org_stores_${orgId}`);
     // Fetch fresh data
