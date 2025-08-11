@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { SidebarNavigationProps } from "../../types/dashboard";
 
 export const SidebarNavigation: React.FC<SidebarNavigationProps> = ({
@@ -9,6 +9,24 @@ export const SidebarNavigation: React.FC<SidebarNavigationProps> = ({
   onSectionChange,
 }) => {
   const router = useRouter();
+  const pathname = usePathname();
+
+  // Determine the current active section based on the URL pathname
+  const getCurrentActiveSection = (): string => {
+    if (pathname.startsWith("/products")) {
+      return "products";
+    } else if (pathname.startsWith("/orders")) {
+      return "orders";
+    } else if (pathname.startsWith("/accounts")) {
+      return "accounts";
+    } else if (pathname.startsWith("/inventory")) {
+      return "inventory";
+    }
+    return activeSection; // fallback to prop if no URL match
+  };
+
+  const currentActiveSection = getCurrentActiveSection();
+
   const navigationItems = [
     {
       id: "products" as const,
@@ -97,30 +115,35 @@ export const SidebarNavigation: React.FC<SidebarNavigationProps> = ({
           </h3>
         </div>
         <div className="space-y-1">
-          {navigationItems.map((item) => (
-            <button
-              key={item.id}
-              onClick={() => {
-                if (item.id === "products") {
-                  router.push("/products");
-                } else if (item.id === "orders") {
-                  router.push("/orders");
-                } else {
-                  onSectionChange(item.id);
-                }
-              }}
-              className={`w-full text-left px-4 py-2 text-sm font-medium rounded-md mx-2 ${
-                activeSection === item.id
-                  ? "bg-indigo-100 text-indigo-700"
-                  : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
-              }`}
-            >
-              <div className="flex items-center">
-                {item.icon}
-                {item.label}
-              </div>
-            </button>
-          ))}
+          {navigationItems.map((item) => {
+            const isActive = currentActiveSection === item.id;
+            return (
+              <button
+                key={item.id}
+                onClick={() => {
+                  if (item.id === "products") {
+                    router.push("/products");
+                  } else if (item.id === "orders") {
+                    router.push("/orders");
+                  } else if (item.id === "accounts") {
+                    router.push("/accounts");
+                  } else {
+                    onSectionChange(item.id);
+                  }
+                }}
+                className={`w-full text-left px-4 py-2 text-sm font-medium rounded-md mx-2 transition-all duration-200 ${
+                  isActive
+                    ? "bg-gradient-to-r from-indigo-50 to-blue-50 text-indigo-700 border-r-4 border-indigo-500 shadow-sm font-semibold"
+                    : "text-gray-600 hover:bg-gray-50 hover:text-gray-900 hover:shadow-sm"
+                }`}
+              >
+                <div className="flex items-center">
+                  {item.icon}
+                  {item.label}
+                </div>
+              </button>
+            );
+          })}
         </div>
       </nav>
     </aside>
