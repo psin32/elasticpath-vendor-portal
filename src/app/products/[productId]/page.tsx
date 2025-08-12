@@ -5,7 +5,10 @@ import { useRouter, useParams } from "next/navigation";
 import { useEpccApi } from "../../../hooks/useEpccApi";
 import { useDashboard } from "../../../hooks/useDashboard";
 import { ImageOverlay } from "../../../components/ui/ImageOverlay";
-import { PcmProduct } from "@elasticpath/js-sdk";
+import {
+  PcmProduct,
+  ProductTemplateRelationshipResource,
+} from "@elasticpath/js-sdk";
 
 interface ProductImage {
   url: string;
@@ -69,6 +72,9 @@ export default function ProductEditPage() {
   >({}); // Track loading state for each template data
   const [templateDataInitializing, setTemplateDataInitializing] =
     useState(false); // Track initial template data loading
+  const [templateDataExists, setTemplateDataExists] = useState<
+    Record<string, boolean>
+  >({}); // Track which templates have data
 
   // Use the same dashboard state management
   const { selectedOrgId, selectedStoreId, handleOrgSelect, handleStoreSelect } =
@@ -86,6 +92,8 @@ export default function ProductEditPage() {
     fetchTemplateFields,
     fetchTemplateData,
     updateTemplateData,
+    createTemplateData,
+    createProductTemplateRelationship,
   } = useEpccApi(selectedOrgId || undefined, selectedStoreId || undefined);
 
   // Form state for editable fields
@@ -288,6 +296,7 @@ export default function ProductEditPage() {
 
       if (result && result.data) {
         setTemplateData((prev) => ({ ...prev, [slug]: result.data }));
+        setTemplateDataExists((prev) => ({ ...prev, [slug]: true }));
 
         // Populate form data with existing template data
         const existingData = result.data;
@@ -307,18 +316,81 @@ export default function ProductEditPage() {
 
           return updatedFormData;
         });
-
-        // Show success message
-        const templateName =
-          allTemplates.find((t) => t.slug === slug)?.name || slug;
-        setSuccess(`Template data loaded for ${templateName}`);
-        setTimeout(() => setSuccess(null), 3000);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error(`Error fetching template data for ${slug}:`, error);
+
+      // Check if it's a 404 error (template attached but no data)
+      if (error && error.status === 404) {
+        console.log(`Template ${slug} is attached but has no data yet`);
+        setTemplateDataExists((prev) => ({ ...prev, [slug]: false }));
+        setTemplateData((prev) => ({ ...prev, [slug]: {} }));
+      } else {
+        // For other errors, assume template data exists but failed to load
+        setTemplateDataExists((prev) => ({ ...prev, [slug]: true }));
+      }
+
       // Don't show error to user as this is optional data
     } finally {
       setTemplateDataLoading((prev) => ({ ...prev, [slug]: false }));
+    }
+  };
+
+  // Handle attaching template to product
+  const handleAttachTemplate = async (templateId: string) => {
+    try {
+      const request: ProductTemplateRelationshipResource[] = [
+        {
+          id: templateId,
+          meta: {
+            tags: [],
+          },
+        },
+      ];
+
+      console.log("request", request);
+
+      const result = await createProductTemplateRelationship(
+        productId,
+        request
+      );
+      if (result) {
+        setSuccess("Template attached successfully!");
+        // Refresh templates to update the UI
+        await refreshTemplates();
+        setTimeout(() => setSuccess(null), 3000);
+      } else {
+        setError("Failed to attach template");
+        setTimeout(() => setError(null), 3000);
+      }
+    } catch (error: any) {
+      console.error("Error attaching template:", error);
+      setError("Failed to attach template");
+      setTimeout(() => setError(null), 3000);
+    }
+  };
+
+  // Handle detaching template from product
+  const handleDetachTemplate = async (templateId: string) => {
+    try {
+      // Find the relationship ID
+      const relationship = productTemplates.find((pt) => pt.id === templateId);
+      if (!relationship) {
+        setError("Template relationship not found");
+        setTimeout(() => setError(null), 3000);
+        return;
+      }
+
+      // For now, we'll just show a message that detaching is not implemented
+      // In a real implementation, you would call an API to delete the relationship
+      setError(
+        "Template detachment is not yet implemented. Please contact support."
+      );
+      setTimeout(() => setError(null), 3000);
+    } catch (error: any) {
+      console.error("Error detaching template:", error);
+      setError("Failed to detach template");
+      setTimeout(() => setError(null), 3000);
     }
   };
 
@@ -336,20 +408,50 @@ export default function ProductEditPage() {
         }
       });
 
-      const result = await updateTemplateData(
-        templateSlug,
-        productId,
-        templateDataToSave
-      );
+      // Check if template data exists or needs to be created
+      const dataExists = templateDataExists[templateSlug];
+      let result;
+
+      if (dataExists) {
+        // Update existing template data
+        console.log(`Updating existing template data for ${templateSlug}`);
+        result = await updateTemplateData(
+          templateSlug,
+          productId,
+          templateDataToSave
+        );
+      } else {
+        // Create new template data
+        console.log(`Creating new template data for ${templateSlug}`);
+        templateDataToSave.id = productId;
+        result = await createTemplateData(templateSlug, templateDataToSave);
+      }
 
       if (result === null) {
         // API call failed, error is already set in apiCall
-        setError(`Failed to save template ${templateSlug} data`);
+        setError(
+          `Failed to ${
+            dataExists ? "update" : "create"
+          } template ${templateSlug} data`
+        );
         setTimeout(() => setError(null), 3000);
         return;
       }
 
-      setSuccess(`Template ${templateSlug} data saved successfully`);
+      // Update the template data exists flag
+      setTemplateDataExists((prev) => ({ ...prev, [templateSlug]: true }));
+
+      // Update local template data with the saved data
+      setTemplateData((prev) => ({
+        ...prev,
+        [templateSlug]: templateDataToSave,
+      }));
+
+      setSuccess(
+        `Template ${templateSlug} data ${
+          dataExists ? "updated" : "created"
+        } successfully`
+      );
       setTimeout(() => setSuccess(null), 3000);
     } catch (error: any) {
       console.error(`Error saving template ${templateSlug} data:`, error);
@@ -1297,24 +1399,26 @@ export default function ProductEditPage() {
                       Product Attributes
                     </h2>
 
-                    {/* Template Information */}
-                    <div className="mb-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
-                      {/* Available Templates */}
-                      <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
-                        <div className="flex items-center justify-between mb-3">
-                          <h3 className="text-sm font-semibold text-blue-900">
-                            Available Templates
-                          </h3>
-                          <button
-                            onClick={refreshTemplates}
-                            disabled={
-                              templatesLoading || productTemplatesLoading
-                            }
-                            className="text-blue-600 hover:text-blue-800 text-xs font-medium p-1 rounded hover:bg-blue-100 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                            title="Refresh templates"
-                          >
+                    {/* Templates Accordion */}
+                    <div className="mb-6">
+                      <div className="border border-gray-200 rounded-lg">
+                        <button
+                          onClick={() =>
+                            setShowTemplateForms((prev) => ({
+                              ...prev,
+                              accordion: !prev.accordion,
+                            }))
+                          }
+                          className="w-full px-6 py-4 text-left bg-gray-50 hover:bg-gray-100 transition-colors duration-200 rounded-t-lg border-b border-gray-200"
+                        >
+                          <div className="flex items-center justify-between">
+                            <h3 className="text-lg font-semibold text-gray-900">
+                              Available Templates ({allTemplates.length})
+                            </h3>
                             <svg
-                              className="w-4 h-4"
+                              className={`w-5 h-5 text-gray-500 transform transition-transform duration-200 ${
+                                showTemplateForms.accordion ? "rotate-180" : ""
+                              }`}
                               fill="none"
                               stroke="currentColor"
                               viewBox="0 0 24 24"
@@ -1323,67 +1427,80 @@ export default function ProductEditPage() {
                                 strokeLinecap="round"
                                 strokeLinejoin="round"
                                 strokeWidth={2}
-                                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                                d="M19 9l-7 7-7-7"
                               />
                             </svg>
-                          </button>
-                        </div>
-                        {templatesLoading ? (
-                          <div className="flex items-center text-blue-700">
-                            <svg
-                              className="animate-spin h-4 w-4 mr-2"
-                              xmlns="http://www.w3.org/2000/svg"
-                              fill="none"
-                              viewBox="0 0 24 24"
-                            >
-                              <circle
-                                className="opacity-25"
-                                cx="12"
-                                cy="12"
-                                r="10"
-                                stroke="currentColor"
-                                strokeWidth="4"
-                              ></circle>
-                              <path
-                                className="opacity-75"
-                                fill="currentColor"
-                                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                              ></path>
-                            </svg>
-                            Loading templates...
                           </div>
-                        ) : allTemplates.length > 0 ? (
-                          <div className="space-y-2">
-                            {allTemplates.slice(0, 5).map((template: any) => (
-                              <div
-                                key={template.id}
-                                className="flex items-center justify-between text-sm p-2 bg-blue-100 rounded border border-blue-200"
-                              >
-                                <div className="flex-1 min-w-0">
-                                  <div className="text-blue-800 font-medium truncate">
-                                    {template?.name || template.id}
-                                  </div>
-                                  {template?.description && (
-                                    <div className="text-blue-600 text-xs truncate">
-                                      {template.description}
-                                    </div>
-                                  )}
-                                </div>
-                                <span className="text-blue-600 text-xs ml-2 flex-shrink-0">
-                                  {template.type}
+                        </button>
+
+                        {showTemplateForms.accordion && (
+                          <div className="p-6 bg-white rounded-b-lg">
+                            {templatesLoading || productTemplatesLoading ? (
+                              <div className="flex items-center justify-center py-8">
+                                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                                <span className="ml-2 text-gray-600">
+                                  Loading templates...
                                 </span>
                               </div>
-                            ))}
-                            {allTemplates.length > 5 && (
-                              <div className="text-xs text-blue-600 pt-2 border-t border-blue-200">
-                                +{allTemplates.length - 5} more templates
+                            ) : allTemplates.length === 0 ? (
+                              <div className="text-center py-8 text-gray-500">
+                                No templates available
+                              </div>
+                            ) : (
+                              <div className="space-y-4">
+                                {allTemplates.map((template) => {
+                                  const isAssociated = productTemplates.some(
+                                    (pt) => pt.id === template.id
+                                  );
+                                  const slug = template.slug;
+                                  const fields = templateFields[slug] || [];
+
+                                  return (
+                                    <div
+                                      key={template.id}
+                                      className="border border-gray-200 rounded-lg p-4"
+                                    >
+                                      <div className="flex items-center justify-between mb-3">
+                                        <div>
+                                          <h4 className="text-md font-semibold text-gray-900">
+                                            {template.name || slug}
+                                          </h4>
+                                          <p className="text-sm text-gray-500">
+                                            Slug: {slug}
+                                          </p>
+                                        </div>
+                                        <div className="flex items-center space-x-2">
+                                          {!isAssociated ? (
+                                            <button
+                                              onClick={() =>
+                                                handleAttachTemplate(
+                                                  template.id
+                                                )
+                                              }
+                                              className="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700 transition-colors duration-200"
+                                            >
+                                              Attach Template
+                                            </button>
+                                          ) : (
+                                            <button
+                                              onClick={() =>
+                                                handleDetachTemplate(
+                                                  template.id
+                                                )
+                                              }
+                                              className="bg-red-600 text-white px-3 py-1 rounded text-sm hover:bg-red-700 transition-colors duration-200"
+                                            >
+                                              Detach Template
+                                            </button>
+                                          )}
+                                        </div>
+                                      </div>
+                                    </div>
+                                  );
+                                })}
                               </div>
                             )}
                           </div>
-                        ) : (
-                          <p className="text-blue-700 text-sm">
-                            No templates available
-                          </p>
                         )}
                       </div>
                     </div>
@@ -1524,7 +1641,9 @@ export default function ProductEditPage() {
                                             d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                                           ></path>
                                         </svg>
-                                        Saving...
+                                        {templateDataExists[slug]
+                                          ? "Updating..."
+                                          : "Creating..."}
                                       </>
                                     ) : (
                                       <>
@@ -1541,7 +1660,9 @@ export default function ProductEditPage() {
                                             d="M5 13l4 4L19 7"
                                           />
                                         </svg>
-                                        Save
+                                        {templateDataExists[slug]
+                                          ? "Update"
+                                          : "Create"}
                                       </>
                                     )}
                                   </button>

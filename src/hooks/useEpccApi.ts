@@ -194,6 +194,33 @@ export const useEpccApi = (orgId?: string, storeId?: string) => {
   );
 
   /**
+   * create template data
+   */
+  const createTemplateData = useCallback(
+    async (slug: string, request: any) => {
+      return apiCall(async (client) => {
+        return await client.Flows.CreateEntry(slug, request);
+      }, "Failed to create template data");
+    },
+    [apiCall]
+  );
+
+  /**
+   * create product template relationship
+   */
+  const createProductTemplateRelationship = useCallback(
+    async (productId: string, resources: any) => {
+      return apiCall(async (client) => {
+        return await client.PCM.TemplateRelationships.Create(
+          productId,
+          resources
+        );
+      }, "Failed to create product template relationship");
+    },
+    [apiCall]
+  );
+
+  /**
    * Fetch template fields
    */
   const fetchTemplateFields = useCallback(
@@ -433,6 +460,8 @@ export const useEpccApi = (orgId?: string, storeId?: string) => {
     fetchTemplateData,
     fetchTemplateFields,
     updateTemplateData,
+    createProductTemplateRelationship,
+    createTemplateData,
 
     // Utility methods
     clearApiError: () => setApiError(null),
