@@ -14,10 +14,12 @@ export const useDashboard = () => {
   const [storeFilterMode, setStoreFilterMode] =
     useState<StoreFilterMode>("all");
   const [organizationStores, setOrganizationStores] = useState<any[]>([]);
+  const [standaloneStores, setStandaloneStores] = useState<any[]>([]);
   const [storesLoading, setStoresLoading] = useState(false);
+  const [standaloneStoresLoading, setStandaloneStoresLoading] = useState(false);
 
   // EPCC API hook - don't pass dependencies to avoid circular issues
-  const { fetchOrgStores } = useEpccApi();
+  const { fetchOrgStores, fetchStores } = useEpccApi();
 
   // Fetch stores for a specific organization
   const fetchOrganizationStores = async (orgId: string) => {
@@ -56,6 +58,43 @@ export const useDashboard = () => {
     }
   };
 
+  // Fetch standalone stores (not part of any organization)
+  const fetchStandaloneStores = async () => {
+    setStandaloneStoresLoading(true);
+    try {
+      const result = await fetchStores();
+      if (result && result.data) {
+        setStandaloneStores(result.data);
+        // Persist standalone stores to localStorage with timestamp
+        const storeData = {
+          stores: result.data,
+          timestamp: Date.now(),
+          type: "standalone",
+        };
+        localStorage.setItem("standalone_stores", JSON.stringify(storeData));
+      } else {
+        setStandaloneStores([]);
+        const storeData = {
+          stores: [],
+          timestamp: Date.now(),
+          type: "standalone",
+        };
+        localStorage.setItem("standalone_stores", JSON.stringify(storeData));
+      }
+    } catch (error) {
+      console.error("Failed to fetch standalone stores:", error);
+      setStandaloneStores([]);
+      const storeData = {
+        stores: [],
+        timestamp: Date.now(),
+        type: "standalone",
+      };
+      localStorage.setItem("standalone_stores", JSON.stringify(storeData));
+    } finally {
+      setStandaloneStoresLoading(false);
+    }
+  };
+
   // Load organization stores from localStorage if available and not expired
   const loadOrganizationStoresFromStorage = (orgId: string) => {
     try {
@@ -88,6 +127,42 @@ export const useDashboard = () => {
       );
       // Clear corrupted data
       localStorage.removeItem(`org_stores_${orgId}`);
+    }
+    return false; // Indicates no stores were found in storage
+  };
+
+  // Load standalone stores from localStorage if available and not expired
+  const loadStandaloneStoresFromStorage = () => {
+    try {
+      const storedData = localStorage.getItem("standalone_stores");
+      if (storedData) {
+        const parsedData = JSON.parse(storedData);
+
+        // Check if the stored data is for standalone stores
+        if (parsedData.type !== "standalone") {
+          localStorage.removeItem("standalone_stores");
+          return false;
+        }
+
+        // Check if the stored data is not too old (24 hours)
+        const maxAge = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
+        const isExpired = Date.now() - parsedData.timestamp > maxAge;
+
+        if (isExpired) {
+          localStorage.removeItem("standalone_stores");
+          return false;
+        }
+
+        setStandaloneStores(parsedData.stores);
+        return true; // Indicates stores were loaded from storage
+      }
+    } catch (error) {
+      console.error(
+        "Failed to load standalone stores from localStorage:",
+        error
+      );
+      // Clear corrupted data
+      localStorage.removeItem("standalone_stores");
     }
     return false; // Indicates no stores were found in storage
   };
@@ -144,6 +219,25 @@ export const useDashboard = () => {
     }
   };
 
+  // Handle standalone store selection (clear organization)
+  const handleStandaloneStoreSelect = async () => {
+    setSelectedOrgId(null);
+    localStorage.removeItem("selected_org_id");
+    setSelectedStoreId(null);
+    localStorage.removeItem("selected_store_id");
+    setActiveSection("stores");
+    setStoreSearchTerm("");
+    setOrganizationStores([]);
+
+    // Try to load standalone stores from localStorage first
+    const storesLoadedFromStorage = loadStandaloneStoresFromStorage();
+
+    // If no stores in localStorage, fetch them from API
+    if (!storesLoadedFromStorage) {
+      await fetchStandaloneStores();
+    }
+  };
+
   // Handle store selection
   const handleStoreSelect = (storeId: string) => {
     // Check if this is a different store
@@ -196,7 +290,9 @@ export const useDashboard = () => {
     selectedStoreId,
     storeFilterMode,
     organizationStores,
+    standaloneStores,
     storesLoading,
+    standaloneStoresLoading,
 
     // Setters
     setActiveSection,
@@ -206,10 +302,13 @@ export const useDashboard = () => {
     // Handlers
     handleOrgSelect,
     handleStoreSelect,
+    handleStandaloneStoreSelect,
     handleFilterModeToggle,
     clearSelections,
     clearOrganizationStores,
     refreshOrganizationStores,
     fetchOrganizationStores: (orgId: string) => fetchOrganizationStores(orgId),
+    fetchStandaloneStores,
+    loadStandaloneStoresFromStorage,
   };
 };

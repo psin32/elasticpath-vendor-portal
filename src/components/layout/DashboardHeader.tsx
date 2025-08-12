@@ -12,17 +12,22 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
   selectedStoreId,
   storeFilterMode,
   organizationStores,
+  standaloneStores,
   storesLoading,
+  standaloneStoresLoading,
   orgSearchTerm,
   onOrgSearchChange,
   onOrgSelect,
   onStoreSelect,
   onFetchOrganizationStores,
+  onStandaloneStoreSelect,
   onLogout,
 }) => {
   const router = useRouter();
   const [showOrgSelector, setShowOrgSelector] = React.useState(false);
   const [showStoreSelector, setShowStoreSelector] = React.useState(false);
+  const [showStandaloneStoreSelector, setShowStandaloneStoreSelector] =
+    React.useState(false);
   const [isRefreshing, setIsRefreshing] = React.useState(false);
 
   // Handle organization selection with refresh indicator
@@ -67,6 +72,7 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
               searchTerm={orgSearchTerm}
               onSearchChange={onOrgSearchChange}
               onOrgSelect={handleOrgSelectWithRefresh}
+              onStandaloneStoreSelect={onStandaloneStoreSelect}
               isOpen={showOrgSelector}
               onToggle={() => setShowOrgSelector(!showOrgSelector)}
             />
@@ -120,6 +126,43 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
                         />
                       </svg>
                     </button>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Show standalone stores selector when no organization is selected */}
+            {!selectedOrgId && (
+              <div className="flex items-center space-x-2">
+                <span className="text-sm text-gray-500">→</span>
+                <StoreSelector
+                  stores={standaloneStores}
+                  selectedStoreId={selectedStoreId}
+                  searchTerm=""
+                  onSearchChange={() => {}}
+                  onStoreSelect={handleStoreSelectWithRefresh}
+                  isOpen={showStandaloneStoreSelector}
+                  onToggle={() =>
+                    setShowStandaloneStoreSelector(!showStandaloneStoreSelector)
+                  }
+                  disabled={false}
+                  storeFilterMode="all"
+                />
+                {standaloneStores.length === 0 && !standaloneStoresLoading && (
+                  <span className="text-xs text-gray-400 italic">
+                    No standalone stores found
+                  </span>
+                )}
+                {standaloneStoresLoading && (
+                  <span className="text-xs text-blue-500 italic">
+                    Loading standalone stores...
+                  </span>
+                )}
+                {standaloneStores.length > 0 && !standaloneStoresLoading && (
+                  <div className="flex items-center space-x-1">
+                    <span className="text-xs text-green-500">
+                      ✓ {standaloneStores.length} standalone stores
+                    </span>
                   </div>
                 )}
               </div>

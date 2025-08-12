@@ -22,9 +22,12 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
     selectedStoreId,
     storeFilterMode,
     organizationStores,
+    standaloneStores,
     storesLoading,
+    standaloneStoresLoading,
     handleOrgSelect,
     handleStoreSelect,
+    handleStandaloneStoreSelect,
     handleFilterModeToggle,
     fetchOrganizationStores,
     setActiveSection,
@@ -77,12 +80,15 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
         selectedStoreId={selectedStoreId}
         storeFilterMode={storeFilterMode}
         organizationStores={organizationStores}
+        standaloneStores={standaloneStores}
         storesLoading={storesLoading}
+        standaloneStoresLoading={standaloneStoresLoading}
         orgSearchTerm={orgSearchTerm}
         onOrgSearchChange={setOrgSearchTerm}
         onOrgSelect={handleOrgSelect}
         onStoreSelect={handleStoreSelect}
         onFetchOrganizationStores={fetchOrganizationStores}
+        onStandaloneStoreSelect={handleStandaloneStoreSelect}
         onLogout={logout}
       />
 

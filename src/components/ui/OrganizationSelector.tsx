@@ -9,6 +9,7 @@ export const OrganizationSelector: React.FC<OrganizationSelectorProps> = ({
   searchTerm,
   onSearchChange,
   onOrgSelect,
+  onStandaloneStoreSelect,
   isOpen,
   onToggle,
 }) => {
@@ -40,6 +41,13 @@ export const OrganizationSelector: React.FC<OrganizationSelectorProps> = ({
   const handleOrgSelect = async (orgId: string) => {
     await onOrgSelect(orgId);
     onToggle(); // Close dropdown after organization selection
+  };
+
+  const handleStandaloneStoreSelect = () => {
+    if (onStandaloneStoreSelect) {
+      onStandaloneStoreSelect();
+    }
+    onToggle(); // Close dropdown
   };
 
   return (
@@ -81,45 +89,81 @@ export const OrganizationSelector: React.FC<OrganizationSelectorProps> = ({
 
       {/* Organization Dropdown */}
       {isOpen && (
-        <div className="absolute z-10 mt-1 w-64 bg-white shadow-lg rounded-md border border-gray-200 max-h-60 overflow-auto">
-          <div className="p-2">
-            <input
-              type="text"
-              placeholder="Search organizations..."
-              value={searchTerm}
-              onChange={(e) => onSearchChange(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            />
-          </div>
-          <div className="py-1">
-            {organizations
-              ?.filter(
-                (org) =>
-                  org.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                  org.id.toLowerCase().includes(searchTerm.toLowerCase())
-              )
-              .map((org) => (
+        <div className="absolute z-10 mt-1 w-80 bg-white shadow-lg rounded-md border border-gray-200 max-h-80 overflow-auto">
+          {/* Main Options Section */}
+          <div className="border-b border-gray-200">
+            <div className="p-3">
+              <h3 className="text-sm font-medium text-gray-900 mb-2">
+                Choose Option:
+              </h3>
+              <div className="space-y-2">
                 <button
-                  key={org.id}
-                  onClick={() => handleOrgSelect(org.id)}
-                  className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 flex items-center justify-between"
+                  onClick={handleStandaloneStoreSelect}
+                  className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100 rounded-md flex items-center space-x-2"
                 >
-                  <span className="truncate">{org.name}</span>
-                  {selectedOrgId === org.id && (
-                    <svg
-                      className="h-4 w-4 text-indigo-600"
-                      fill="currentColor"
-                      viewBox="0 0 20 20"
-                    >
-                      <path
-                        fillRule="evenodd"
-                        d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                        clipRule="evenodd"
-                      />
-                    </svg>
-                  )}
+                  <svg
+                    className="h-4 w-4 text-blue-500"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
+                    />
+                  </svg>
+                  <span>Select Standalone Stores</span>
                 </button>
-              ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Organizations Section */}
+          <div className="p-2">
+            <div className="mb-2">
+              <h3 className="text-sm font-medium text-gray-900 mb-2">
+                Organizations:
+              </h3>
+              <input
+                type="text"
+                placeholder="Search organizations..."
+                value={searchTerm}
+                onChange={(e) => onSearchChange(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              />
+            </div>
+            <div className="py-1">
+              {organizations
+                ?.filter(
+                  (org) =>
+                    org.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                    org.id.toLowerCase().includes(searchTerm.toLowerCase())
+                )
+                .map((org) => (
+                  <button
+                    key={org.id}
+                    onClick={() => handleOrgSelect(org.id)}
+                    className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 flex items-center justify-between"
+                  >
+                    <span className="truncate">{org.name}</span>
+                    {selectedOrgId === org.id && (
+                      <svg
+                        className="h-4 w-4 text-indigo-600"
+                        fill="currentColor"
+                        viewBox="0 0 20 20"
+                      >
+                        <path
+                          fillRule="evenodd"
+                          d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                          clipRule="evenodd"
+                        />
+                      </svg>
+                    )}
+                  </button>
+                ))}
+            </div>
           </div>
         </div>
       )}

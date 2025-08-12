@@ -15,6 +15,7 @@ export interface OrganizationSelectorProps {
   searchTerm: string;
   onSearchChange: (value: string) => void;
   onOrgSelect: (orgId: string) => Promise<void>;
+  onStandaloneStoreSelect?: () => void;
   isOpen: boolean;
   onToggle: () => void;
 }
@@ -42,12 +43,15 @@ export interface DashboardHeaderProps {
   selectedStoreId: string | null;
   storeFilterMode: StoreFilterMode;
   organizationStores: any[];
+  standaloneStores: any[];
   storesLoading: boolean;
+  standaloneStoresLoading: boolean;
   orgSearchTerm: string;
   onOrgSearchChange: (value: string) => void;
   onOrgSelect: (orgId: string) => Promise<void>;
   onStoreSelect: (storeId: string) => void;
   onFetchOrganizationStores?: (orgId: string) => void;
+  onStandaloneStoreSelect: () => Promise<void>;
   onLogout: () => void;
 }
 
