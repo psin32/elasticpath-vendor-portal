@@ -32,26 +32,13 @@ export default function LoginForm() {
         <div className="mx-auto w-full max-w-sm lg:w-96">
           <div>
             {/* Modern Logo */}
-            <div className="flex items-center justify-center w-16 h-16 mx-auto bg-gradient-to-br from-[#990033] via-[#e6034b] to-pink-500 rounded-2xl shadow-lg">
-              <svg
-                className="w-8 h-8 text-white"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M13 10V3L4 14h7v7l9-11h-7z"
-                />
-              </svg>
+            <div className="flex items-center justify-center mx-auto">
+              <img
+                src="/images/kennicott-logo.png"
+                alt="Kennicott Logo"
+                className="w-64 h-auto"
+              />
             </div>
-
-            <h2 className="mt-8 text-3xl font-bold tracking-tight text-gray-900 text-center">
-              Welcome back
-            </h2>
           </div>
 
           <div className="mt-10">

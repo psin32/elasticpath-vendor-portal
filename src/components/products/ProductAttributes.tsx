@@ -255,7 +255,6 @@ export const ProductAttributes: React.FC<ProductAttributesProps> = ({
 
       // Check if it's a 404 error (template attached but no data)
       if (error && error.status === 404) {
-        console.log(`Template ${slug} is attached but has no data yet`);
         setTemplateDataExists((prev) => ({ ...prev, [slug]: false }));
         setTemplateData((prev) => ({ ...prev, [slug]: {} }));
       } else {
@@ -305,12 +304,6 @@ export const ProductAttributes: React.FC<ProductAttributesProps> = ({
         console.error("Template relationship not found");
         return;
       }
-
-      // For now, we'll just show a message that detaching is not implemented
-      // In a real implementation, you would call an API to delete the relationship
-      console.log(
-        "Template detachment is not yet implemented. Please contact support."
-      );
     } catch (error: any) {
       console.error("Error detaching template:", error);
     }
@@ -336,7 +329,6 @@ export const ProductAttributes: React.FC<ProductAttributesProps> = ({
 
       if (dataExists) {
         // Update existing template data
-        console.log(`Updating existing template data for ${templateSlug}`);
         result = await updateTemplateData(
           templateSlug,
           productId,
@@ -344,7 +336,6 @@ export const ProductAttributes: React.FC<ProductAttributesProps> = ({
         );
       } else {
         // Create new template data
-        console.log(`Creating new template data for ${templateSlug}`);
         templateDataToSave.id = productId;
         result = await createTemplateData(templateSlug, templateDataToSave);
       }

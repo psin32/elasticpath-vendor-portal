@@ -63,7 +63,7 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
             <img
               src="/images/kennicott-logo.png"
               alt="Kennicott Logo"
-              className="w-40 h-auto"
+              className="w-52 ml-[-30px]"
             />
 
             <OrganizationSelector
