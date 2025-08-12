@@ -239,6 +239,98 @@ export const useEpccApi = (orgId?: string, storeId?: string) => {
     [apiCall]
   );
 
+  /**
+   * Update product
+   */
+  const updateProduct = useCallback(
+    async (productId: string, updateData: any) => {
+      return apiCall(async (client) => {
+        return await client.PCM.Update(productId, updateData);
+      }, "Failed to update product");
+    },
+    [apiCall]
+  );
+
+  /**
+   * Fetch inventory by SKU
+   */
+  const fetchInventoryBySku = useCallback(
+    async (sku: string) => {
+      return apiCall(async (client) => {
+        return await client.request.send(
+          `extensions/inventories?filter=eq(ep_sku,${sku})`,
+          "GET",
+          undefined,
+          undefined,
+          client,
+          false,
+          "v2"
+        );
+      }, "Failed to fetch inventory");
+    },
+    [apiCall]
+  );
+
+  /**
+   * Create inventory record
+   */
+  const createInventory = useCallback(
+    async (inventoryData: any) => {
+      return apiCall(async (client) => {
+        return await client.request.send(
+          "extensions/inventories",
+          "POST",
+          inventoryData,
+          undefined,
+          client,
+          false,
+          "v2"
+        );
+      }, "Failed to create inventory");
+    },
+    [apiCall]
+  );
+
+  /**
+   * Update inventory record
+   */
+  const updateInventory = useCallback(
+    async (inventoryId: string, updateData: any) => {
+      return apiCall(async (client) => {
+        return await client.request.send(
+          `extensions/inventories/${inventoryId}`,
+          "PUT",
+          updateData,
+          undefined,
+          client,
+          false,
+          "v2"
+        );
+      }, "Failed to update inventory");
+    },
+    [apiCall]
+  );
+
+  /**
+   * Delete inventory record
+   */
+  const deleteInventory = useCallback(
+    async (inventoryId: string) => {
+      return apiCall(async (client) => {
+        return await client.request.send(
+          `extensions/inventories/${inventoryId}`,
+          "DELETE",
+          undefined,
+          undefined,
+          client,
+          false,
+          "v2"
+        );
+      }, "Failed to delete inventory");
+    },
+    [apiCall]
+  );
+
   // Reset API error when client changes
   useEffect(() => {
     if (isReady) {
@@ -274,6 +366,11 @@ export const useEpccApi = (orgId?: string, storeId?: string) => {
     fetchUserProfile,
     fetchUserRole,
     fetchOrgStores,
+    updateProduct,
+    fetchInventoryBySku,
+    createInventory,
+    updateInventory,
+    deleteInventory,
 
     // Utility methods
     clearApiError: () => setApiError(null),

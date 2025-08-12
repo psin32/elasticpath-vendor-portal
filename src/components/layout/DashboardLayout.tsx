@@ -34,7 +34,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
   // Show loading state
   if (loading) {
     return (
-      <div className="h-full flex items-center justify-center bg-gray-50">
+      <div className="h-full flex items-center justify-center ">
         <div className="text-center">
           <svg
             className="animate-spin h-12 w-12 text-primary-600 mx-auto"
@@ -69,7 +69,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
 
   // Show dashboard layout for authenticated users
   return (
-    <div className="h-full flex flex-col bg-gray-100">
+    <div className="h-full flex flex-col">
       {/* Header - Always visible for authenticated users */}
       <DashboardHeader
         user={user}
