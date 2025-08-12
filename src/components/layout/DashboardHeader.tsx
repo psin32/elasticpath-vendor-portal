@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { DashboardHeaderProps } from "../../types/dashboard";
 import { OrganizationSelector } from "../ui/OrganizationSelector";
 import { StoreSelector } from "../ui/StoreSelector";
-import EpLogo from "../ui/ep-logo";
 
 export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
   user,
@@ -49,7 +48,11 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
       <div className="w-full px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center py-4">
           <div className="flex items-center space-x-6">
-            <EpLogo className="w-40" />
+            <img
+              src="/images/kennicott-logo.png"
+              alt="Kennicott Logo"
+              className="w-40 h-auto"
+            />
 
             <OrganizationSelector
               organizations={user.organizations || []}

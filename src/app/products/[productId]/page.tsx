@@ -33,6 +33,7 @@ export default function ProductEditPage() {
     "details"
   );
   const [editingInventory, setEditingInventory] = useState<string | null>(null);
+  const [editingQuantity, setEditingQuantity] = useState<number>(0);
   const [newInventory, setNewInventory] = useState({
     ep_available_date: "",
     ep_shelf_life_days: 0,
@@ -221,6 +222,60 @@ export default function ProductEditPage() {
   const ensureInteger = (value: any, defaultValue: number = 0): number => {
     const parsed = parseInt(String(value));
     return isNaN(parsed) ? defaultValue : parsed;
+  };
+
+  // Edit inventory functions
+  const startEditInventory = (inventory: any) => {
+    setEditingInventory(inventory.id);
+    setEditingQuantity(inventory.ep_available || 0);
+  };
+
+  const cancelEditInventory = () => {
+    setEditingInventory(null);
+    setEditingQuantity(0);
+  };
+
+  const saveInventoryQuantity = async (inventoryId: string) => {
+    try {
+      // Find the current inventory record to get existing values
+      const currentInventory = inventoryData.find(
+        (inv) => inv.id === inventoryId
+      );
+      if (!currentInventory) {
+        setError("Inventory record not found");
+        return;
+      }
+
+      const updatedData = {
+        data: {
+          type: "inventory_ext",
+          id: currentInventory.ep_id,
+          ep_id: currentInventory.ep_id,
+          ep_available_date: currentInventory.ep_available_date,
+          ep_sku: currentInventory.ep_sku,
+          ep_available: ensureInteger(editingQuantity),
+        },
+      };
+
+      console.log("Updating inventory with data:", updatedData);
+
+      const result = await updateInventory(currentInventory.ep_id, updatedData);
+      if (result) {
+        setSuccess("Inventory quantity updated successfully!");
+        setEditingInventory(null);
+        setEditingQuantity(0);
+        // Refresh inventory data
+        if (product?.attributes.sku) {
+          fetchInventory(product.attributes.sku);
+        }
+        setTimeout(() => setSuccess(null), 3000);
+      } else {
+        setError("Failed to update inventory quantity");
+      }
+    } catch (err) {
+      setError("Failed to update inventory quantity");
+      console.error("Error updating inventory quantity:", err);
+    }
   };
 
   // Inventory management functions
@@ -1098,7 +1153,14 @@ export default function ProductEditPage() {
                           </thead>
                           <tbody className="bg-white divide-y divide-gray-200">
                             {inventoryData.map((inventory) => (
-                              <tr key={inventory.id}>
+                              <tr
+                                key={inventory.id}
+                                className={`${
+                                  editingInventory === inventory.id
+                                    ? "bg-blue-50 border-l-4 border-l-blue-500"
+                                    : ""
+                                }`}
+                              >
                                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                                   {inventory.ep_sku}
                                 </td>
@@ -1113,20 +1175,59 @@ export default function ProductEditPage() {
                                   {inventory.ep_shelf_life_days}
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                  <span
-                                    className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                                      (inventory.ep_available || 0) > 0
-                                        ? "bg-green-100 text-green-800"
-                                        : "bg-red-100 text-red-800"
-                                    }`}
-                                  >
-                                    {inventory.ep_available || 0}
-                                  </span>
+                                  {editingInventory === inventory.id ? (
+                                    <div className="flex items-center space-x-2">
+                                      <div className="flex flex-col">
+                                        <label className="text-xs text-gray-500 mb-1">
+                                          Edit Quantity:
+                                        </label>
+                                        <input
+                                          type="number"
+                                          value={editingQuantity}
+                                          onChange={(e) =>
+                                            setEditingQuantity(
+                                              ensureInteger(e.target.value)
+                                            )
+                                          }
+                                          className="w-24 px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                                          min="0"
+                                          step="1"
+                                          placeholder="0"
+                                        />
+                                      </div>
+                                      <div className="flex flex-col space-y-1">
+                                        <button
+                                          onClick={() =>
+                                            saveInventoryQuantity(inventory.id)
+                                          }
+                                          className="text-green-600 hover:text-green-900 text-xs font-medium px-2 py-1 bg-green-50 rounded hover:bg-green-100"
+                                        >
+                                          Save
+                                        </button>
+                                        <button
+                                          onClick={cancelEditInventory}
+                                          className="text-gray-600 hover:text-gray-900 text-xs font-medium px-2 py-1 bg-gray-50 rounded hover:bg-gray-100"
+                                        >
+                                          Cancel
+                                        </button>
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <span
+                                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                        (inventory.ep_available || 0) > 0
+                                          ? "bg-green-100 text-green-800"
+                                          : "bg-red-100 text-red-800"
+                                      }`}
+                                    >
+                                      {inventory.ep_available || 0}
+                                    </span>
+                                  )}
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                   <button
                                     onClick={() =>
-                                      setEditingInventory(inventory.id)
+                                      startEditInventory(inventory)
                                     }
                                     className="text-indigo-600 hover:text-indigo-900 mr-3"
                                   >
