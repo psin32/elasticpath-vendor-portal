@@ -335,7 +335,9 @@ export default function ProductEditPage() {
         });
 
         // Show success message
-        setSuccess(`Template data loaded for ${slug}`);
+        const templateName =
+          allTemplates.find((t) => t.slug === slug)?.name || slug;
+        setSuccess(`Template data loaded for ${templateName}`);
         setTimeout(() => setSuccess(null), 3000);
       }
     } catch (error) {
@@ -380,7 +382,9 @@ export default function ProductEditPage() {
       return updatedFormData;
     });
 
-    setSuccess(`Form populated with template data for ${slug}`);
+    const templateName =
+      allTemplates.find((t) => t.slug === slug)?.name || slug;
+    setSuccess(`Form populated with template data for ${templateName}`);
     setTimeout(() => setSuccess(null), 3000);
   };
 
@@ -1455,7 +1459,8 @@ export default function ProductEditPage() {
                             >
                               <div className="flex items-center justify-between mb-4">
                                 <h3 className="text-lg font-semibold text-purple-900">
-                                  Template: {slug}
+                                  {allTemplates.find((t) => t.slug === slug)
+                                    ?.name || slug}
                                 </h3>
                                 <div className="flex items-center space-x-3">
                                   <button
