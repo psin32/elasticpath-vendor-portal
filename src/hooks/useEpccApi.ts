@@ -336,6 +336,18 @@ export const useEpccApi = (orgId?: string, storeId?: string) => {
   );
 
   /**
+   * Create product
+   */
+  const createProduct = useCallback(
+    async (createData: any) => {
+      return apiCall(async (client) => {
+        return await client.PCM.Create(createData);
+      }, "Failed to create product");
+    },
+    [apiCall]
+  );
+
+  /**
    * Fetch inventory by SKU
    */
   const fetchInventoryBySku = useCallback(
@@ -462,6 +474,7 @@ export const useEpccApi = (orgId?: string, storeId?: string) => {
     updateTemplateData,
     createProductTemplateRelationship,
     createTemplateData,
+    createProduct,
 
     // Utility methods
     clearApiError: () => setApiError(null),

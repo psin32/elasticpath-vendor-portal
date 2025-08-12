@@ -5,6 +5,7 @@ import { useAuth } from "../../contexts/AuthContext";
 import { useEpccApi } from "../../hooks/useEpccApi";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ImageOverlay } from "../../components/ui/ImageOverlay";
+import { ProductForm } from "../../components/products/ProductForm";
 import { useDashboard } from "../../hooks/useDashboard";
 import { PcmProduct } from "@elasticpath/js-sdk";
 
@@ -28,6 +29,7 @@ export default function ProductsPage() {
     total_count: 0,
     per_page: 20,
   });
+  const [showCreateForm, setShowCreateForm] = useState(false);
 
   // Use the same dashboard state management
   const { selectedOrgId, selectedStoreId, handleOrgSelect, handleStoreSelect } =
@@ -64,6 +66,16 @@ export default function ProductsPage() {
       loadProducts();
     }
   }, [selectedOrgId, selectedStoreId, currentPage, paginationInfo.per_page]);
+
+  const handleCreateSuccess = (newProduct: PcmProduct) => {
+    setShowCreateForm(false);
+    // Refresh the products list to show the new product
+    loadProducts();
+  };
+
+  const handleCreateCancel = () => {
+    setShowCreateForm(false);
+  };
 
   const loadProducts = async () => {
     if (!selectedStoreId) return;
@@ -189,7 +201,27 @@ export default function ProductsPage() {
                       className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
                     />
                   </div>
-                  <div className="ml-4">
+                  <div className="ml-4 flex space-x-3">
+                    <button
+                      onClick={() => setShowCreateForm(true)}
+                      disabled={!selectedStoreId}
+                      className="bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white px-4 py-2 rounded-md text-sm font-medium flex items-center"
+                    >
+                      <svg
+                        className="w-4 h-4 mr-2"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+                        />
+                      </svg>
+                      Create Product
+                    </button>
                     <button
                       onClick={loadProducts}
                       disabled={
@@ -586,6 +618,23 @@ export default function ProductsPage() {
           </div>
         </main>
       </div>
+
+      {/* Create Product Form Modal */}
+      {showCreateForm && (
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+          <div className="relative top-0 mx-auto p-5 w-full max-w-7xl">
+            <div className="relative bg-white rounded-lg shadow-xl">
+              <ProductForm
+                mode="create"
+                selectedOrgId={selectedOrgId || undefined}
+                selectedStoreId={selectedStoreId || undefined}
+                onSuccess={handleCreateSuccess}
+                onCancel={handleCreateCancel}
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

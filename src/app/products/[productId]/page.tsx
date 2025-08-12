@@ -7,7 +7,8 @@ import { useDashboard } from "../../../hooks/useDashboard";
 import { ImageOverlay } from "../../../components/ui/ImageOverlay";
 import { ProductInventory } from "../../../components/products/ProductInventory";
 import { ProductAttributes } from "../../../components/products/ProductAttributes";
-import { PcmProduct } from "@elasticpath/js-sdk";
+import { ProductForm } from "../../../components/products/ProductForm";
+import { PcmProduct, PcmProductResponse } from "@elasticpath/js-sdk";
 
 interface ProductImage {
   url: string;
@@ -19,7 +20,7 @@ export default function ProductEditPage() {
   const params = useParams();
   const productId = params.productId as string;
 
-  const [product, setProduct] = useState<PcmProduct | null>(null);
+  const [product, setProduct] = useState<PcmProductResponse | null>(null);
   const [mainImage, setMainImage] = useState<ProductImage | null>(null);
   const [selectedImage, setSelectedImage] = useState<ProductImage | null>(null);
   const [productLoading, setProductLoading] = useState(true);
@@ -59,22 +60,7 @@ export default function ProductEditPage() {
         const foundProduct = productsData?.data;
 
         if (foundProduct) {
-          setProduct(foundProduct);
-          setMainImage({
-            url: productsData?.included?.main_images?.[0]?.link?.href || "",
-            alt: foundProduct.attributes.name || "Product Image",
-          });
-
-          // Initialize form data with product values
-          setFormData({
-            name: foundProduct.attributes.name || "",
-            description: foundProduct.attributes.description || "",
-            slug: foundProduct.attributes.slug || "",
-            sku: foundProduct.attributes.sku || "",
-            status: foundProduct.attributes.status || "draft",
-            commodity_type:
-              foundProduct.attributes.commodity_type || "physical",
-          });
+          setProduct(productsData);
         }
       } catch (err) {
         setError("Failed to load product");
@@ -99,67 +85,6 @@ export default function ProductEditPage() {
       ...prev,
       [name]: value,
     }));
-  };
-
-  const handleSave = async () => {
-    if (!product) return;
-
-    try {
-      setSaving(true);
-      setError(null);
-      setSuccess(null);
-
-      // Prepare update data
-      const updateData = {
-        type: "product",
-        id: product.id,
-        attributes: {
-          name: formData.name,
-          description: formData.description,
-          slug: formData.slug,
-          sku: formData.sku,
-          status: formData.status,
-          commodity_type: formData.commodity_type,
-        },
-      };
-
-      // Call update API
-      const result = await updateProduct(product.id, updateData);
-
-      if (result) {
-        setSuccess("Product updated successfully!");
-        // Update local product state
-        setProduct((prev: PcmProduct | null) =>
-          prev
-            ? { ...prev, attributes: { ...prev.attributes, ...formData } }
-            : null
-        );
-
-        // Clear success message after 3 seconds
-        setTimeout(() => setSuccess(null), 3000);
-      } else {
-        setError("Failed to update product");
-      }
-    } catch (err) {
-      setError("Failed to update product");
-      console.error("Error updating product:", err);
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const isFormChanged = () => {
-    if (!product) return false;
-
-    return (
-      formData.name !== (product.attributes.name || "") ||
-      formData.description !== (product.attributes.description || "") ||
-      formData.slug !== (product.attributes.slug || "") ||
-      formData.sku !== (product.attributes.sku || "") ||
-      formData.status !== (product.attributes.status || "draft") ||
-      formData.commodity_type !==
-        (product.attributes.commodity_type || "physical")
-    );
   };
 
   if (productLoading) {
@@ -306,77 +231,8 @@ export default function ProductEditPage() {
                       Edit Product
                     </h1>
                     <p className="mt-1 text-sm text-gray-500">
-                      Product ID: {product.id}
+                      Product ID: {product.data.id}
                     </p>
-                  </div>
-                  <div className="flex space-x-3">
-                    <button
-                      onClick={() => router.push("/products")}
-                      className="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors duration-200"
-                    >
-                      <svg
-                        className="w-4 h-4 mr-2"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M10 19l-7-7m0 0l7-7m-7 7h18"
-                        />
-                      </svg>
-                      Cancel
-                    </button>
-                    <button
-                      onClick={handleSave}
-                      disabled={saving || !isFormChanged()}
-                      className="inline-flex items-center px-6 py-2 border border-transparent text-sm font-medium rounded-lg shadow-sm text-white bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
-                    >
-                      {saving ? (
-                        <>
-                          <svg
-                            className="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
-                            xmlns="http://www.w3.org/2000/svg"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                          >
-                            <circle
-                              className="opacity-25"
-                              cx="12"
-                              cy="12"
-                              r="10"
-                              stroke="currentColor"
-                              strokeWidth="4"
-                            ></circle>
-                            <path
-                              className="opacity-75"
-                              fill="currentColor"
-                              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                            ></path>
-                          </svg>
-                          Saving...
-                        </>
-                      ) : (
-                        <>
-                          <svg
-                            className="w-4 h-4 mr-2"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M5 13l4 4L19 7"
-                            />
-                          </svg>
-                          Save Changes
-                        </>
-                      )}
-                    </button>
                   </div>
                 </div>
               </div>
@@ -415,279 +271,7 @@ export default function ProductEditPage() {
                 </nav>
               </div>
               {activeTab === "details" && (
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                  <div className="lg:col-span-1">
-                    <div className="bg-gray-50 rounded-xl p-6 border border-gray-200">
-                      <label className="block text-sm font-semibold text-gray-700 mb-4">
-                        Main Image
-                      </label>
-                      <div className="relative">
-                        <div className="w-full flex justify-center">
-                          <img
-                            src={
-                              mainImage?.url ||
-                              "https://placehold.co/400x400?text=Product+Image"
-                            }
-                            alt={mainImage?.alt || "Product Image"}
-                            className="w-80 h-80 rounded-xl object-cover cursor-pointer hover:opacity-90 transition-all duration-200 shadow-lg border border-gray-200 hover:shadow-xl"
-                            onClick={() => setSelectedImage(mainImage)}
-                          />
-                        </div>
-                      </div>
-                      <div className="mt-4 text-center">
-                        <p className="text-xs text-gray-500">
-                          Image size: 400×400 pixels • Click to view larger
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* Quick Stats */}
-                    <div className="mt-6 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-6 border border-blue-200">
-                      <h3 className="text-sm font-semibold text-blue-900 mb-4">
-                        Quick Stats
-                      </h3>
-                      <div className="space-y-3">
-                        <div className="flex justify-between items-center">
-                          <span className="text-sm text-blue-700">Status</span>
-                          <span
-                            className={`px-2 py-1 text-xs font-medium rounded-full ${
-                              formData.status === "live"
-                                ? "bg-green-100 text-green-800"
-                                : "bg-yellow-100 text-yellow-800"
-                            }`}
-                          >
-                            {formData.status || "Unknown"}
-                          </span>
-                        </div>
-                        <div className="flex justify-between items-center">
-                          <span className="text-sm text-blue-700">Type</span>
-                          <span className="text-sm font-medium text-blue-900">
-                            {formData.commodity_type || "Unknown"}
-                          </span>
-                        </div>
-                        <div className="flex justify-between items-center">
-                          <span className="text-sm text-blue-700">Created</span>
-                          <span className="text-sm font-medium text-blue-900">
-                            {product.meta?.created_at
-                              ? new Date(
-                                  product.meta.created_at
-                                ).toLocaleDateString()
-                              : "Unknown"}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="lg:col-span-2">
-                    <div className="space-y-6">
-                      {/* Product Name */}
-                      <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
-                        <label className="block text-sm font-semibold text-gray-700 mb-3">
-                          Product Name *
-                        </label>
-                        <div className="relative">
-                          <input
-                            type="text"
-                            name="name"
-                            id="name"
-                            value={formData.name}
-                            onChange={handleInputChange}
-                            className="block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors duration-200"
-                            placeholder="Enter product name"
-                            required
-                          />
-                          <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-                            <svg
-                              className="h-5 w-5 text-gray-400"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-                              />
-                            </svg>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* SKU and Slug Row */}
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
-                          <label className="block text-sm font-semibold text-gray-700 mb-3">
-                            SKU *
-                          </label>
-                          <div className="relative">
-                            <input
-                              type="text"
-                              name="sku"
-                              id="sku"
-                              value={formData.sku}
-                              onChange={handleInputChange}
-                              className="block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors duration-200 font-mono"
-                              placeholder="PROD-001"
-                              required
-                            />
-                            <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-                              <svg
-                                className="h-5 w-5 text-gray-400"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={2}
-                                  d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"
-                                />
-                              </svg>
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
-                          <label className="block text-sm font-semibold text-gray-700 mb-3">
-                            Slug
-                          </label>
-                          <div className="relative">
-                            <input
-                              type="text"
-                              name="slug"
-                              id="slug"
-                              value={formData.slug}
-                              onChange={handleInputChange}
-                              className="block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors duration-200"
-                              placeholder="product-name"
-                            />
-                            <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-                              <svg
-                                className="h-5 w-5 text-gray-400"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={2}
-                                  d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"
-                                />
-                              </svg>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Status and Type Row */}
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
-                          <label className="block text-sm font-semibold text-gray-700 mb-3">
-                            Status
-                          </label>
-                          <div className="relative">
-                            <select
-                              name="status"
-                              id="status"
-                              value={formData.status}
-                              onChange={handleInputChange}
-                              className="block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors duration-200 appearance-none"
-                            >
-                              <option value="draft">Draft</option>
-                              <option value="live">Live</option>
-                              <option value="archived">Archived</option>
-                            </select>
-                            <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-                              <svg
-                                className="h-5 w-5 text-gray-400"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={2}
-                                  d="M19 9l-7 7-7-7"
-                                />
-                              </svg>
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
-                          <label className="block text-sm font-semibold text-gray-700 mb-3">
-                            Commodity Type
-                          </label>
-                          <div className="relative">
-                            <select
-                              name="commodity_type"
-                              id="commodity_type"
-                              value={formData.commodity_type}
-                              onChange={handleInputChange}
-                              className="block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors duration-200 appearance-none"
-                            >
-                              <option value="physical">Physical</option>
-                              <option value="digital">Digital</option>
-                            </select>
-                            <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-                              <svg
-                                className="h-5 w-5 text-gray-400"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={2}
-                                  d="M19 9l-7 7-7-7"
-                                />
-                              </svg>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Description */}
-                      <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
-                        <label className="block text-sm font-semibold text-gray-700 mb-3">
-                          Description
-                        </label>
-                        <div className="relative">
-                          <textarea
-                            name="description"
-                            id="description"
-                            rows={4}
-                            value={formData.description}
-                            onChange={handleInputChange}
-                            className="block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors duration-200 resize-none"
-                            placeholder="Enter product description..."
-                          />
-                          <div className="absolute top-3 right-3 pointer-events-none">
-                            <svg
-                              className="h-5 w-4 text-gray-400"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M4 6h16M4 10h16M4 14h16M4 18h16"
-                              />
-                            </svg>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
+                <ProductForm mode="edit" product={product} />
               )}
               {/* Tab Content */}
               {activeTab === "attributes" && (
@@ -704,7 +288,7 @@ export default function ProductEditPage() {
                 <div className="mt-8">
                   <ProductInventory
                     productId={productId}
-                    productSku={product?.attributes?.sku || undefined}
+                    productSku={product?.data.attributes?.sku || undefined}
                     selectedOrgId={selectedOrgId || undefined}
                     selectedStoreId={selectedStoreId || undefined}
                   />
