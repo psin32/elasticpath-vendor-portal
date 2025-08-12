@@ -14,3 +14,5 @@ export { Toast } from "./ui/Toast";
 export { OrganizationsList } from "./products/OrganizationsList";
 export { StoresList } from "./products/StoresList";
 export { default as EpccDemo } from "./products/EpccDemo";
+export { ProductInventory } from "./products/ProductInventory";
+export { ProductAttributes } from "./products/ProductAttributes";
