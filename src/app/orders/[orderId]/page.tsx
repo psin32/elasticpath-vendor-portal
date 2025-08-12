@@ -77,13 +77,13 @@ export default function OrderDetailsPage({ params }: OrderDetailsPageProps) {
 
   // Fetch order when org/store changes
   useEffect(() => {
-    if (selectedOrgId && selectedStoreId && orderId) {
+    if (selectedStoreId && orderId) {
       loadOrder();
     }
   }, [selectedOrgId, selectedStoreId, orderId]);
 
   const loadOrder = async () => {
-    if (!selectedOrgId || !selectedStoreId || !orderId) return;
+    if (!selectedStoreId || !orderId) return;
 
     setOrderLoading(true);
     setError(null);
@@ -274,7 +274,7 @@ export default function OrderDetailsPage({ params }: OrderDetailsPageProps) {
                   </svg>
                   <p className="mt-2 text-gray-600">Loading order details...</p>
                 </div>
-              ) : !selectedOrgId || !selectedStoreId ? (
+              ) : !selectedStoreId ? (
                 <div className="text-center py-12">
                   <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded-md">
                     <div className="flex">

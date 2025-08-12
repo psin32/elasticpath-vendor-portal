@@ -71,13 +71,13 @@ export default function OrdersPage() {
 
   // Fetch orders when org/store changes or page changes
   useEffect(() => {
-    if (selectedOrgId && selectedStoreId) {
+    if (selectedStoreId) {
       loadOrders();
     }
   }, [selectedOrgId, selectedStoreId, currentPage, paginationInfo.per_page]);
 
   const loadOrders = async () => {
-    if (!selectedOrgId || !selectedStoreId) return;
+    if (!selectedStoreId) return;
 
     setOrdersLoading(true);
     setError(null);
@@ -279,7 +279,7 @@ export default function OrdersPage() {
                   </svg>
                   <p className="mt-2 text-gray-600">Loading orders...</p>
                 </div>
-              ) : !selectedOrgId || !selectedStoreId ? (
+              ) : !selectedStoreId ? (
                 <div className="text-center py-12">
                   <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded-md">
                     <div className="flex">

@@ -60,13 +60,13 @@ export default function ProductsPage() {
 
   // Fetch products when org/store changes
   useEffect(() => {
-    if (selectedOrgId && selectedStoreId) {
+    if (selectedStoreId) {
       loadProducts();
     }
   }, [selectedOrgId, selectedStoreId, currentPage, paginationInfo.per_page]);
 
   const loadProducts = async () => {
-    if (!selectedOrgId || !selectedStoreId) return;
+    if (!selectedStoreId) return;
 
     setProductsLoading(true);
     setError(null);
@@ -254,7 +254,7 @@ export default function ProductsPage() {
                   </svg>
                   <p className="mt-2 text-gray-600">Loading products...</p>
                 </div>
-              ) : !selectedOrgId || !selectedStoreId ? (
+              ) : !selectedStoreId ? (
                 <div className="text-center py-12">
                   <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded-md">
                     <div className="flex">

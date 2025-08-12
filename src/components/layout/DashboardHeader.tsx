@@ -167,6 +167,16 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
                 )}
               </div>
             )}
+
+            {/* Show message when no store is selected at all */}
+            {!selectedOrgId && !selectedStoreId && (
+              <div className="flex items-center space-x-2">
+                <span className="text-sm text-gray-500">→</span>
+                <span className="text-sm text-amber-600 font-medium">
+                  Please select a store to view products and orders
+                </span>
+              </div>
+            )}
           </div>
 
           <div className="flex items-center space-x-4">
