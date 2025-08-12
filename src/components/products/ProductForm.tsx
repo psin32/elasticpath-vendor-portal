@@ -93,7 +93,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({
     setSuccess(null);
 
     try {
-      const productData = {
+      const productData: any = {
         type: "product",
         attributes: {
           name: formData.name,
@@ -109,6 +109,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({
       if (mode === "create") {
         result = await createProduct(productData);
       } else {
+        productData.id = productId;
         result = await updateProduct(productId!, productData);
       }
 
@@ -146,7 +147,6 @@ export const ProductForm: React.FC<ProductFormProps> = ({
       <div>
         {/* Form */}
         <form id="product-form" onSubmit={handleSubmit} className="px-8 py-6">
-          {/* Alert Messages */}
           {error && (
             <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
               <div className="flex">

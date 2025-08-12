@@ -37,11 +37,23 @@ export const useEpccApi = (orgId?: string, storeId?: string) => {
       try {
         const result = await apiFunction(client);
         return result;
-      } catch (error) {
-        const message = error instanceof Error ? error.message : errorMessage;
-        setApiError(message);
-        console.error("EPCC API Error:", error);
-        return null;
+      } catch (error: any) {
+        if (error.errors && Array.isArray(error.errors)) {
+          const errorMessages = error.errors.map((err: any) => {
+            if (err?.title?.detail) {
+              return err.title.detail;
+            }
+            return "Unknown error";
+          });
+
+          setApiError(errorMessages);
+          return null;
+        } else {
+          const message = error instanceof Error ? error.message : errorMessage;
+          setApiError(message);
+          console.error("EPCC API Error:", error);
+          return null;
+        }
       } finally {
         setApiLoading(false);
       }

@@ -14,6 +14,9 @@ export const ProductAttributes: React.FC<ProductAttributesProps> = ({
   selectedOrgId,
   selectedStoreId,
 }) => {
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+
   // Template state
   const [allTemplates, setAllTemplates] = useState<any[]>([]);
   const [productTemplates, setProductTemplates] = useState<any[]>([]);
@@ -52,6 +55,7 @@ export const ProductAttributes: React.FC<ProductAttributesProps> = ({
     updateTemplateData,
     createTemplateData,
     createProductTemplateRelationship,
+    apiError,
   } = useEpccApi(selectedOrgId, selectedStoreId);
 
   // Load all templates
@@ -277,8 +281,6 @@ export const ProductAttributes: React.FC<ProductAttributesProps> = ({
         },
       ];
 
-      console.log("request", request);
-
       const result = await createProductTemplateRelationship(
         productId,
         request
@@ -349,11 +351,8 @@ export const ProductAttributes: React.FC<ProductAttributesProps> = ({
 
       if (result === null) {
         // API call failed, error is already set in apiCall
-        console.error(
-          `Failed to ${
-            dataExists ? "update" : "create"
-          } template ${templateSlug} data`
-        );
+        setError(apiError);
+        setTimeout(() => setError(null), 3000);
         return;
       }
 
@@ -366,13 +365,30 @@ export const ProductAttributes: React.FC<ProductAttributesProps> = ({
         [templateSlug]: templateDataToSave,
       }));
 
-      console.log(
+      setSuccess(
         `Template ${templateSlug} data ${
           dataExists ? "updated" : "created"
         } successfully`
       );
+      setTimeout(() => setSuccess(null), 3000);
     } catch (error: any) {
       console.error(`Error saving template ${templateSlug} data:`, error);
+
+      // Handle error array structure
+      if (error.errors && Array.isArray(error.errors)) {
+        const errorMessages = error.errors.map((err: any) => {
+          if (err?.title?.detail) {
+            return err.title.detail;
+          }
+          return "Unknown error";
+        });
+
+        setError(errorMessages);
+      } else {
+        setError(apiError);
+      }
+
+      setTimeout(() => setError(null), 3000);
     } finally {
       setSavingTemplate((prev) => ({ ...prev, [templateSlug]: false }));
     }
@@ -412,6 +428,52 @@ export const ProductAttributes: React.FC<ProductAttributesProps> = ({
   return (
     <div className="bg-white border border-gray-200 rounded-xl shadow-sm">
       <div className="px-8 py-8">
+        {error && (
+          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+            <div className="flex">
+              <div className="flex-shrink-0">
+                <svg
+                  className="h-5 w-5 text-red-400"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+              </div>
+              <div className="ml-3">
+                <p className="text-sm text-red-800">{error}</p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {success && (
+          <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg">
+            <div className="flex">
+              <div className="flex-shrink-0">
+                <svg
+                  className="h-5 w-5 text-green-400"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+              </div>
+              <div className="ml-3">
+                <p className="text-sm text-green-800">{success}</p>
+              </div>
+            </div>
+          </div>
+        )}
+
         <h2 className="text-xl font-bold text-gray-900 mb-4">
           Product Attributes
         </h2>
@@ -544,21 +606,49 @@ export const ProductAttributes: React.FC<ProductAttributesProps> = ({
                     </h3>
                     <div className="flex items-center space-x-3">
                       <button
-                        onClick={() => refreshTemplates()}
-                        className="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700 transition-colors duration-200"
-                      >
-                        Refresh Data
-                      </button>
-                      <button
                         onClick={() =>
                           setShowTemplateForms((prev) => ({
                             ...prev,
                             [slug]: !prev[slug],
                           }))
                         }
-                        className="bg-purple-600 text-white px-3 py-1 rounded text-sm hover:bg-purple-700 transition-colors duration-200"
+                        className="inline-flex items-center px-3 py-2 border border-purple-300 shadow-sm text-sm font-medium rounded-lg text-purple-700 bg-white hover:bg-purple-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 transition-colors duration-200"
                       >
-                        {showTemplateForms[slug] ? "Hide Form" : "Show Form"}
+                        {showTemplateForms[slug] ? (
+                          <>
+                            <svg
+                              className="w-4 h-4 mr-2"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M6 18L18 6M6 6l12 12"
+                              />
+                            </svg>
+                            Hide Form
+                          </>
+                        ) : (
+                          <>
+                            <svg
+                              className="w-4 h-4 mr-2"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M4 6h16M4 10h16M4 14h16M4 18h16"
+                              />
+                            </svg>
+                            Show Form
+                          </>
+                        )}
                       </button>
                       <button
                         onClick={() => handleSaveTemplateData(slug)}

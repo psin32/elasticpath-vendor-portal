@@ -177,6 +177,28 @@ export default function ProductEditPage() {
   return (
     <div className="p-6 bg-white">
       <div className="w-full">
+        {/* Back Button */}
+        <div className="mb-6">
+          <button
+            onClick={() => router.push("/products")}
+            className="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+          >
+            <svg
+              className="w-4 h-4 mr-2"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M10 19l-7-7m0 0l7-7m-7 7h18"
+              />
+            </svg>
+            Back to Products
+          </button>
+        </div>
         {/* Success Message */}
         {success && (
           <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg">
@@ -271,7 +293,13 @@ export default function ProductEditPage() {
                 </nav>
               </div>
               {activeTab === "details" && (
-                <ProductForm mode="edit" product={product} />
+                <ProductForm
+                  mode="edit"
+                  product={product}
+                  productId={product.data.id}
+                  selectedOrgId={selectedOrgId || undefined}
+                  selectedStoreId={selectedStoreId || undefined}
+                />
               )}
               {/* Tab Content */}
               {activeTab === "attributes" && (
