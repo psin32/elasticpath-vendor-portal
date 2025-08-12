@@ -191,6 +191,18 @@ export const useDashboard = () => {
       if (savedFilterMode === "organization") {
         setStoreSearchTerm(savedOrgId);
       }
+    } else if (savedStoreId) {
+      // No organization selected but store is selected - this is standalone store mode
+      setSelectedOrgId(null);
+      setActiveSection("stores");
+
+      // Try to load standalone stores from localStorage first
+      const storesLoadedFromStorage = loadStandaloneStoresFromStorage();
+
+      // If no stores in localStorage, fetch them from API
+      if (!storesLoadedFromStorage) {
+        fetchStandaloneStores();
+      }
     }
 
     if (savedStoreId) {
@@ -223,8 +235,7 @@ export const useDashboard = () => {
   const handleStandaloneStoreSelect = async () => {
     setSelectedOrgId(null);
     localStorage.removeItem("selected_org_id");
-    setSelectedStoreId(null);
-    localStorage.removeItem("selected_store_id");
+    // Don't clear store ID - preserve standalone store selection
     setActiveSection("stores");
     setStoreSearchTerm("");
     setOrganizationStores([]);
@@ -244,6 +255,14 @@ export const useDashboard = () => {
     if (selectedStoreId !== storeId) {
       setSelectedStoreId(storeId);
       localStorage.setItem("selected_store_id", storeId);
+
+      // If no organization is selected, this is a standalone store
+      if (!selectedOrgId) {
+        // Ensure standalone stores are loaded
+        if (standaloneStores.length === 0) {
+          loadStandaloneStoresFromStorage();
+        }
+      }
     }
   };
 
@@ -273,12 +292,26 @@ export const useDashboard = () => {
     setOrganizationStores([]);
   };
 
+  // Clear standalone stores
+  const clearStandaloneStores = () => {
+    localStorage.removeItem("standalone_stores");
+    setStandaloneStores([]);
+  };
+
   // Refresh organization stores (force fetch from API)
   const refreshOrganizationStores = async (orgId: string) => {
     // Clear stored data first
     localStorage.removeItem(`org_stores_${orgId}`);
     // Fetch fresh data
     await fetchOrganizationStores(orgId);
+  };
+
+  // Refresh standalone stores (force fetch from API)
+  const refreshStandaloneStores = async () => {
+    // Clear stored data first
+    localStorage.removeItem("standalone_stores");
+    // Fetch fresh data
+    await fetchStandaloneStores();
   };
 
   return {
@@ -306,7 +339,9 @@ export const useDashboard = () => {
     handleFilterModeToggle,
     clearSelections,
     clearOrganizationStores,
+    clearStandaloneStores,
     refreshOrganizationStores,
+    refreshStandaloneStores,
     fetchOrganizationStores: (orgId: string) => fetchOrganizationStores(orgId),
     fetchStandaloneStores,
     loadStandaloneStoresFromStorage,
