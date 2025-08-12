@@ -7,7 +7,7 @@ import { DashboardLayout } from "@/components/layout/DashboardLayout";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Elastic Path Admin Portal",
+  title: "Kennicott Vendor Portal",
   description:
     "Admin portal for managing Elastic Path organizations and stores",
 };

@@ -141,11 +141,6 @@ export const useDashboard = () => {
       if (!storesLoadedFromStorage) {
         await fetchOrganizationStores(orgId);
       }
-
-      // Small delay to ensure localStorage is updated and user sees the selection
-      setTimeout(() => {
-        window.location.reload();
-      }, 100);
     }
   };
 
@@ -155,11 +150,6 @@ export const useDashboard = () => {
     if (selectedStoreId !== storeId) {
       setSelectedStoreId(storeId);
       localStorage.setItem("selected_store_id", storeId);
-
-      // Small delay to ensure localStorage is updated and user sees the selection
-      setTimeout(() => {
-        window.location.reload();
-      }, 100);
     }
   };
 
