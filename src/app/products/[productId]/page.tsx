@@ -29,9 +29,9 @@ export default function ProductEditPage() {
   // Inventory state
   const [inventoryData, setInventoryData] = useState<any[]>([]);
   const [inventoryLoading, setInventoryLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState<"details" | "inventory">(
-    "details"
-  );
+  const [activeTab, setActiveTab] = useState<
+    "details" | "attributes" | "inventory"
+  >("details");
   const [editingInventory, setEditingInventory] = useState<string | null>(null);
   const [editingQuantity, setEditingQuantity] = useState<number>(0);
   const [newInventory, setNewInventory] = useState({
@@ -40,6 +40,45 @@ export default function ProductEditPage() {
     ep_available: 0,
   });
   const [showNewInventoryForm, setShowNewInventoryForm] = useState(false);
+
+  // Attributes state
+  const [attributesData, setAttributesData] = useState<Record<string, any>>({});
+  const [attributesLoading, setAttributesLoading] = useState(false);
+  const [editingAttribute, setEditingAttribute] = useState<string | null>(null);
+  const [editingAttributeValue, setEditingAttributeValue] =
+    useState<string>("");
+  const [newAttribute, setNewAttribute] = useState({
+    key: "",
+    value: "",
+  });
+  const [showNewAttributeForm, setShowNewAttributeForm] = useState(false);
+
+  // Template state
+  const [allTemplates, setAllTemplates] = useState<any[]>([]);
+  const [productTemplates, setProductTemplates] = useState<any[]>([]);
+  const [templatesLoading, setTemplatesLoading] = useState(false);
+  const [productTemplatesLoading, setProductTemplatesLoading] = useState(false);
+
+  // Template fields state
+  const [templateFields, setTemplateFields] = useState<Record<string, any[]>>(
+    {}
+  );
+  const [templateFieldsLoading, setTemplateFieldsLoading] = useState(false);
+  const [templateFormData, setTemplateFormData] = useState<Record<string, any>>(
+    {}
+  );
+  const [showTemplateForms, setShowTemplateForms] = useState<
+    Record<string, boolean>
+  >({}); // Show by default for each template
+  const [savingTemplate, setSavingTemplate] = useState<Record<string, boolean>>(
+    {}
+  ); // Track saving state for each template
+  const [templateData, setTemplateData] = useState<Record<string, any>>({}); // Store fetched template data
+  const [templateDataLoading, setTemplateDataLoading] = useState<
+    Record<string, boolean>
+  >({}); // Track loading state for each template data
+  const [templateDataInitializing, setTemplateDataInitializing] =
+    useState(false); // Track initial template data loading
 
   // Use the same dashboard state management
   const { selectedOrgId, selectedStoreId, handleOrgSelect, handleStoreSelect } =
@@ -52,6 +91,10 @@ export default function ProductEditPage() {
     createInventory,
     updateInventory,
     deleteInventory,
+    fetchAllTemplates,
+    fetchProductTemplates,
+    fetchTemplateFields,
+    fetchTemplateData,
   } = useEpccApi(selectedOrgId || undefined, selectedStoreId || undefined);
 
   // Form state for editable fields
@@ -83,6 +126,313 @@ export default function ProductEditPage() {
     }
   };
 
+  // Load all templates
+  const loadAllTemplates = async () => {
+    try {
+      setTemplatesLoading(true);
+      const result = await fetchAllTemplates();
+      if (result && result.data) {
+        setAllTemplates(result.data);
+        return result.data;
+      } else {
+        setAllTemplates([]);
+        return [];
+      }
+    } catch (err) {
+      console.error("Error fetching all templates:", err);
+      setAllTemplates([]);
+      return [];
+    } finally {
+      setTemplatesLoading(false);
+    }
+  };
+
+  // Load product templates
+  const loadProductTemplates = async () => {
+    if (!productId) return [];
+
+    try {
+      setProductTemplatesLoading(true);
+      const result = await fetchProductTemplates(productId);
+      if (result && result.data) {
+        setProductTemplates(result.data);
+        return result.data;
+      } else {
+        setProductTemplates([]);
+        return [];
+      }
+    } catch (err) {
+      console.error("Error fetching product templates:", err);
+      setProductTemplates([]);
+      return [];
+    } finally {
+      setProductTemplatesLoading(false);
+    }
+  };
+
+  // Load template fields based on product template relationships
+  const loadTemplateFields = async (
+    allTemplatesData: any[],
+    productTemplatesData: any[]
+  ) => {
+    if (!productTemplatesData.length || !allTemplatesData.length) return;
+
+    try {
+      setTemplateFieldsLoading(true);
+      const fieldsData: Record<string, any[]> = {};
+      const formData: Record<string, any> = {};
+
+      // Find template slugs from product template relationships
+      for (const productTemplate of productTemplatesData) {
+        const templateId = productTemplate.id;
+
+        // Find the corresponding template in allTemplatesData to get the slug
+        const template = allTemplatesData.find((t) => t.id === templateId);
+        if (template && template?.slug) {
+          const slug = template.slug;
+
+          try {
+            // Fetch fields for this template
+            const fieldsResult = await fetchTemplateFields(slug);
+            if (fieldsResult && fieldsResult.data) {
+              fieldsData[slug] = fieldsResult.data;
+
+              // Initialize form data for this template
+              fieldsResult.data.forEach((field: any) => {
+                const fieldKey = `${slug}_${field.slug}`;
+
+                // Check if field has validation rules and find enum type
+                let enumOptions: string[] = [];
+                if (
+                  field.validation_rules &&
+                  Array.isArray(field.validation_rules)
+                ) {
+                  const enumRule = field.validation_rules.find(
+                    (rule: any) => rule.type === "enum"
+                  );
+                  if (
+                    enumRule &&
+                    enumRule.options &&
+                    Array.isArray(enumRule.options)
+                  ) {
+                    enumOptions = enumRule.options;
+                  }
+                }
+
+                if (enumOptions.length > 0) {
+                  // For enum fields, set first option as default
+                  formData[fieldKey] = enumOptions[0] || "";
+                } else {
+                  // For other fields, set empty string as default
+                  formData[fieldKey] = "";
+                }
+              });
+            }
+          } catch (err) {
+            console.error(`Error fetching fields for template ${slug}:`, err);
+            fieldsData[slug] = [];
+          }
+        }
+      }
+      console.log("fieldsData", fieldsData);
+      console.log("formData", formData);
+      setTemplateFields(fieldsData);
+      setTemplateFormData(formData);
+
+      // After setting form data, fetch and populate template data for all templates
+      setTimeout(async () => {
+        console.log("Starting template data population...");
+        setTemplateDataInitializing(true);
+
+        try {
+          for (const productTemplate of productTemplatesData) {
+            const templateId = productTemplate.id;
+            const template = allTemplatesData.find((t) => t.id === templateId);
+            if (template && template?.slug) {
+              const slug = template.slug;
+              try {
+                console.log(`Fetching template data for ${slug}...`);
+                await fetchTemplateDataForSlug(slug);
+              } catch (err) {
+                console.error(`Error fetching template data for ${slug}:`, err);
+              }
+            }
+          }
+          console.log("Template data population completed");
+        } finally {
+          setTemplateDataInitializing(false);
+        }
+      }, 200); // Small delay to ensure form data is set first
+    } catch (err) {
+      console.error("Error loading template fields:", err);
+      setTemplateFields({});
+      setTemplateFormData({});
+    } finally {
+      setTemplateFieldsLoading(false);
+    }
+  };
+
+  // Refresh all template data
+  const refreshTemplates = async () => {
+    const [allTemplatesResult, productTemplatesResult] = await Promise.all([
+      loadAllTemplates(),
+      loadProductTemplates(),
+    ]);
+    // Load template fields after templates are loaded
+    await loadTemplateFields(allTemplatesResult, productTemplatesResult);
+
+    // Initialize showTemplateForms state for each template
+    const initialShowState: Record<string, boolean> = {};
+    allTemplatesResult.forEach((template) => {
+      if (template.slug) {
+        initialShowState[template.slug] = true; // Show by default
+      }
+    });
+    setShowTemplateForms(initialShowState);
+
+    // Template data will be automatically fetched by loadTemplateFields
+    console.log(
+      "Template refresh completed - data should be automatically loaded"
+    );
+  };
+
+  // Fetch template data for a specific template
+  const fetchTemplateDataForSlug = async (slug: string) => {
+    if (!productId) return;
+
+    try {
+      setTemplateDataLoading((prev) => ({ ...prev, [slug]: true }));
+
+      const result = await fetchTemplateData(slug, productId);
+      console.log(`Template data result for ${slug}:`, result);
+
+      if (result && result.data) {
+        setTemplateData((prev) => ({ ...prev, [slug]: result.data }));
+
+        // Populate form data with existing template data
+        const existingData = result.data;
+        console.log(`Existing data for ${slug}:`, existingData);
+
+        setTemplateFormData((prevFormData) => {
+          const updatedFormData = { ...prevFormData };
+
+          // Update form data for fields that have existing values
+          Object.keys(prevFormData).forEach((key) => {
+            if (key.startsWith(`${slug}_`)) {
+              const fieldId = key.replace(`${slug}_`, "");
+              if (existingData[fieldId] !== undefined) {
+                console.log(
+                  `Setting field ${key} to value:`,
+                  existingData[fieldId]
+                );
+                updatedFormData[key] = existingData[fieldId];
+              }
+            }
+          });
+
+          console.log(`Updated form data for ${slug}:`, updatedFormData);
+          return updatedFormData;
+        });
+
+        // Show success message
+        setSuccess(`Template data loaded for ${slug}`);
+        setTimeout(() => setSuccess(null), 3000);
+      }
+    } catch (error) {
+      console.error(`Error fetching template data for ${slug}:`, error);
+      // Don't show error to user as this is optional data
+    } finally {
+      setTemplateDataLoading((prev) => ({ ...prev, [slug]: false }));
+    }
+  };
+
+  // Manually populate form with template data (for debugging)
+  const populateFormWithTemplateData = (slug: string) => {
+    const existingData = templateData[slug];
+    if (!existingData) {
+      setError(`No template data available for ${slug}`);
+      setTimeout(() => setError(null), 3000);
+      return;
+    }
+
+    console.log(`=== Manual Population for ${slug} ===`);
+    console.log(`Template data:`, existingData);
+    console.log(`Current form data:`, templateFormData);
+
+    setTemplateFormData((prevFormData) => {
+      const updatedFormData = { ...prevFormData };
+
+      // Update form data for fields that have existing values
+      Object.keys(prevFormData).forEach((key) => {
+        if (key.startsWith(`${slug}_`)) {
+          const fieldId = key.replace(`${slug}_`, "");
+          if (existingData[fieldId] !== undefined) {
+            console.log(
+              `Manually setting field ${key} to value:`,
+              existingData[fieldId]
+            );
+            updatedFormData[key] = existingData[fieldId];
+          }
+        }
+      });
+
+      console.log(`Updated form data for ${slug}:`, updatedFormData);
+      return updatedFormData;
+    });
+
+    setSuccess(`Form populated with template data for ${slug}`);
+    setTimeout(() => setSuccess(null), 3000);
+  };
+
+  // Debug function to show current state
+  const debugTemplateState = (slug: string) => {
+    console.log(`=== Debug State for ${slug} ===`);
+    console.log(`Template data:`, templateData[slug]);
+    console.log(`Template fields:`, templateFields[slug]);
+    console.log(
+      `Form data keys:`,
+      Object.keys(templateFormData).filter((key) => key.startsWith(`${slug}_`))
+    );
+    console.log(
+      `Form data values:`,
+      Object.fromEntries(
+        Object.entries(templateFormData).filter(([key]) =>
+          key.startsWith(`${slug}_`)
+        )
+      )
+    );
+  };
+
+  // Handle saving individual template data
+  const handleSaveTemplateData = async (templateSlug: string) => {
+    try {
+      setSavingTemplate((prev) => ({ ...prev, [templateSlug]: true }));
+
+      // Get the form data for this specific template
+      const templateDataToSave: Record<string, any> = {};
+      Object.keys(templateFormData).forEach((key) => {
+        if (key.startsWith(`${templateSlug}_`)) {
+          const fieldId = key.replace(`${templateSlug}_`, "");
+          templateDataToSave[fieldId] = templateFormData[key];
+        }
+      });
+
+      console.log(`Saving template ${templateSlug} data:`, templateDataToSave);
+
+      // TODO: Implement actual save logic here
+      // This could be an API call to save the template field values
+
+      setSuccess(`Template ${templateSlug} data saved successfully`);
+      setTimeout(() => setSuccess(null), 3000);
+    } catch (error) {
+      console.error(`Error saving template ${templateSlug} data:`, error);
+      setError(`Failed to save template ${templateSlug} data`);
+      setTimeout(() => setError(null), 3000);
+    } finally {
+      setSavingTemplate((prev) => ({ ...prev, [templateSlug]: false }));
+    }
+  };
+
   useEffect(() => {
     const loadProduct = async () => {
       try {
@@ -110,6 +460,12 @@ export default function ProductEditPage() {
               foundProduct.attributes.commodity_type || "physical",
           });
 
+          // Initialize attributes data from product
+          // Check for any custom attributes that might exist on the product
+          const productAttributes =
+            (foundProduct as any).attributes?.attributes || {};
+          setAttributesData(productAttributes);
+
           // Fetch inventory data for this product
           if (foundProduct.attributes.sku) {
             fetchInventory(foundProduct.attributes.sku);
@@ -127,6 +483,33 @@ export default function ProductEditPage() {
       loadProduct();
     }
   }, [productId, fetchProduct]);
+
+  // Load templates when attributes tab is selected
+  useEffect(() => {
+    const init = async () => {
+      if (activeTab === "attributes") {
+        console.log("loadAllTemplates");
+        const [allTemplatesResult, productTemplatesResult] = await Promise.all([
+          loadAllTemplates(),
+          loadProductTemplates(),
+        ]);
+
+        // Load template fields with the actual data returned from the functions
+        await loadTemplateFields(allTemplatesResult, productTemplatesResult);
+        console.log("loadTemplateFields", templateFields);
+
+        // Initialize showTemplateForms state for each template
+        const initialShowState: Record<string, boolean> = {};
+        allTemplatesResult.forEach((template) => {
+          if (template.slug) {
+            initialShowState[template.slug] = true; // Show by default
+          }
+        });
+        setShowTemplateForms(initialShowState);
+      }
+    };
+    init();
+  }, [activeTab]);
 
   const handleInputChange = (
     e: React.ChangeEvent<
@@ -159,6 +542,7 @@ export default function ProductEditPage() {
           sku: formData.sku,
           status: formData.status,
           commodity_type: formData.commodity_type,
+          attributes: attributesData, // Include custom attributes
         },
       };
 
@@ -185,6 +569,51 @@ export default function ProductEditPage() {
     } finally {
       setSaving(false);
     }
+  };
+
+  // Save attributes separately
+  const handleSaveAttributes = async () => {
+    if (!product) return;
+
+    try {
+      setSaving(true);
+      setError(null);
+      setSuccess(null);
+
+      // Prepare update data with only attributes
+      const updateData = {
+        type: "product",
+        id: product.id,
+        attributes: {
+          ...product.attributes,
+          attributes: attributesData, // Update only the custom attributes
+        },
+      };
+
+      // Call update API
+      const result = await updateProduct(product.id, updateData);
+
+      if (result) {
+        setSuccess("Attributes updated successfully!");
+        // Clear success message after 3 seconds
+        setTimeout(() => setSuccess(null), 3000);
+      } else {
+        setError("Failed to update attributes");
+      }
+    } catch (err) {
+      setError("Failed to update attributes");
+      console.error("Error updating attributes:", err);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // Handle template form input changes
+  const handleTemplateFormChange = (fieldKey: string, value: any) => {
+    setTemplateFormData((prev) => ({
+      ...prev,
+      [fieldKey]: value,
+    }));
   };
 
   const isFormChanged = () => {
@@ -256,8 +685,6 @@ export default function ProductEditPage() {
           ep_available: ensureInteger(editingQuantity),
         },
       };
-
-      console.log("Updating inventory with data:", updatedData);
 
       const result = await updateInventory(currentInventory.ep_id, updatedData);
       if (result) {
@@ -612,6 +1039,21 @@ export default function ProductEditPage() {
                     Product Details
                   </button>
                   <button
+                    onClick={() => setActiveTab("attributes")}
+                    className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                      activeTab === "attributes"
+                        ? "border-indigo-500 text-indigo-600"
+                        : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                    }`}
+                  >
+                    Attributes
+                    {Object.keys(attributesData).length > 0 && (
+                      <span className="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                        {Object.keys(attributesData).length}
+                      </span>
+                    )}
+                  </button>
+                  <button
                     onClick={() => setActiveTab("inventory")}
                     className={`py-2 px-1 border-b-2 font-medium text-sm ${
                       activeTab === "inventory"
@@ -902,6 +1344,447 @@ export default function ProductEditPage() {
                         </div>
                       </div>
                     </div>
+                  </div>
+                </div>
+              ) : activeTab === "attributes" ? (
+                <div className="bg-white border border-gray-200 rounded-xl shadow-sm">
+                  <div className="px-8 py-8">
+                    <h2 className="text-xl font-bold text-gray-900 mb-4">
+                      Product Attributes
+                    </h2>
+
+                    {/* Template Information */}
+                    <div className="mb-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
+                      {/* Available Templates */}
+                      <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
+                        <div className="flex items-center justify-between mb-3">
+                          <h3 className="text-sm font-semibold text-blue-900">
+                            Available Templates
+                          </h3>
+                          <button
+                            onClick={refreshTemplates}
+                            disabled={
+                              templatesLoading || productTemplatesLoading
+                            }
+                            className="text-blue-600 hover:text-blue-800 text-xs font-medium p-1 rounded hover:bg-blue-100 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                            title="Refresh templates"
+                          >
+                            <svg
+                              className="w-4 h-4"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                              />
+                            </svg>
+                          </button>
+                        </div>
+                        {templatesLoading ? (
+                          <div className="flex items-center text-blue-700">
+                            <svg
+                              className="animate-spin h-4 w-4 mr-2"
+                              xmlns="http://www.w3.org/2000/svg"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                            >
+                              <circle
+                                className="opacity-25"
+                                cx="12"
+                                cy="12"
+                                r="10"
+                                stroke="currentColor"
+                                strokeWidth="4"
+                              ></circle>
+                              <path
+                                className="opacity-75"
+                                fill="currentColor"
+                                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                              ></path>
+                            </svg>
+                            Loading templates...
+                          </div>
+                        ) : allTemplates.length > 0 ? (
+                          <div className="space-y-2">
+                            {allTemplates.slice(0, 5).map((template: any) => (
+                              <div
+                                key={template.id}
+                                className="flex items-center justify-between text-sm p-2 bg-blue-100 rounded border border-blue-200"
+                              >
+                                <div className="flex-1 min-w-0">
+                                  <div className="text-blue-800 font-medium truncate">
+                                    {template?.name || template.id}
+                                  </div>
+                                  {template?.description && (
+                                    <div className="text-blue-600 text-xs truncate">
+                                      {template.description}
+                                    </div>
+                                  )}
+                                </div>
+                                <span className="text-blue-600 text-xs ml-2 flex-shrink-0">
+                                  {template.type}
+                                </span>
+                              </div>
+                            ))}
+                            {allTemplates.length > 5 && (
+                              <div className="text-xs text-blue-600 pt-2 border-t border-blue-200">
+                                +{allTemplates.length - 5} more templates
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <p className="text-blue-700 text-sm">
+                            No templates available
+                          </p>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Template Fields Forms */}
+                    {Object.keys(templateFields).length > 0 && (
+                      <div className="mb-6 space-y-6">
+                        {Object.entries(templateFields).map(
+                          ([slug, fields]) => (
+                            <div
+                              key={slug}
+                              className="bg-purple-50 rounded-lg p-6 border border-purple-200"
+                            >
+                              <div className="flex items-center justify-between mb-4">
+                                <h3 className="text-lg font-semibold text-purple-900">
+                                  Template: {slug}
+                                </h3>
+                                <div className="flex items-center space-x-3">
+                                  <button
+                                    onClick={() =>
+                                      fetchTemplateDataForSlug(slug)
+                                    }
+                                    disabled={templateDataLoading[slug]}
+                                    className="inline-flex items-center px-3 py-2 border border-blue-300 shadow-sm text-sm font-medium rounded-lg text-blue-700 bg-white hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                                    title="Refresh template data"
+                                  >
+                                    {templateDataLoading[slug] ? (
+                                      <>
+                                        <svg
+                                          className="animate-spin h-4 w-4"
+                                          xmlns="http://www.w3.org/2000/svg"
+                                          fill="none"
+                                          viewBox="0 0 24 24"
+                                        >
+                                          <circle
+                                            className="opacity-25"
+                                            cx="12"
+                                            cy="12"
+                                            r="10"
+                                            stroke="currentColor"
+                                            strokeWidth="4"
+                                          ></circle>
+                                          <path
+                                            className="opacity-75"
+                                            fill="currentColor"
+                                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                                          ></path>
+                                        </svg>
+                                      </>
+                                    ) : (
+                                      <>
+                                        <svg
+                                          className="w-4 h-4"
+                                          fill="none"
+                                          stroke="currentColor"
+                                          viewBox="0 0 24 24"
+                                        >
+                                          <path
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                            strokeWidth={2}
+                                            d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                                          />
+                                        </svg>
+                                      </>
+                                    )}
+                                  </button>
+                                  <button
+                                    onClick={() =>
+                                      setShowTemplateForms((prev) => ({
+                                        ...prev,
+                                        [slug]: !prev[slug],
+                                      }))
+                                    }
+                                    className="inline-flex items-center px-3 py-2 border border-purple-300 shadow-sm text-sm font-medium rounded-lg text-purple-700 bg-white hover:bg-purple-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 transition-colors duration-200"
+                                  >
+                                    {showTemplateForms[slug] ? (
+                                      <>
+                                        <svg
+                                          className="w-4 h-4 mr-2"
+                                          fill="none"
+                                          stroke="currentColor"
+                                          viewBox="0 0 24 24"
+                                        >
+                                          <path
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                            strokeWidth={2}
+                                            d="M6 18L18 6M6 6l12 12"
+                                          />
+                                        </svg>
+                                        Hide Form
+                                      </>
+                                    ) : (
+                                      <>
+                                        <svg
+                                          className="w-4 h-4 mr-2"
+                                          fill="none"
+                                          stroke="currentColor"
+                                          viewBox="0 0 24 24"
+                                        >
+                                          <path
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                            strokeWidth={2}
+                                            d="M4 6h16M4 10h16M4 14h16M4 18h16"
+                                          />
+                                        </svg>
+                                        Show Form
+                                      </>
+                                    )}
+                                  </button>
+                                  <button
+                                    onClick={() => handleSaveTemplateData(slug)}
+                                    disabled={savingTemplate[slug]}
+                                    className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                                  >
+                                    {savingTemplate[slug] ? (
+                                      <>
+                                        <svg
+                                          className="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
+                                          xmlns="http://www.w3.org/2000/svg"
+                                          fill="none"
+                                          viewBox="0 0 24 24"
+                                        >
+                                          <circle
+                                            className="opacity-25"
+                                            cx="12"
+                                            cy="12"
+                                            r="10"
+                                            stroke="currentColor"
+                                            strokeWidth="4"
+                                          ></circle>
+                                          <path
+                                            className="opacity-75"
+                                            fill="currentColor"
+                                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                                          ></path>
+                                        </svg>
+                                        Saving...
+                                      </>
+                                    ) : (
+                                      <>
+                                        <svg
+                                          className="w-4 h-4 mr-2"
+                                          fill="none"
+                                          stroke="currentColor"
+                                          viewBox="0 0 24 24"
+                                        >
+                                          <path
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                            strokeWidth={2}
+                                            d="M5 13l4 4L19 7"
+                                          />
+                                        </svg>
+                                        Save
+                                      </>
+                                    )}
+                                  </button>
+                                </div>
+                              </div>
+
+                              {showTemplateForms[slug] && (
+                                <div className="space-y-6">
+                                  <div className="bg-white rounded-lg p-4 border border-purple-200">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                      {fields.map((field: any) => {
+                                        const fieldKey = `${slug}_${field.slug}`;
+                                        const fieldValue =
+                                          templateFormData[fieldKey] || "";
+                                        const fieldName =
+                                          field.name || field.slug;
+                                        const fieldType = field.type || "text";
+                                        const fieldRequired =
+                                          field.required || false;
+
+                                        // Debug logging for field values
+                                        console.log(`Field ${fieldKey}:`, {
+                                          fieldName,
+                                          fieldValue,
+                                          templateFormData:
+                                            templateFormData[fieldKey],
+                                          allFormData: templateFormData,
+                                        });
+                                        // Extract validation rules and find enum options
+                                        let enumOptions: string[] = [];
+                                        let fieldValidationRules: any = {};
+
+                                        if (
+                                          field.validation_rules &&
+                                          Array.isArray(field.validation_rules)
+                                        ) {
+                                          field.validation_rules.forEach(
+                                            (rule: any) => {
+                                              if (
+                                                rule.type === "enum" &&
+                                                rule.options &&
+                                                Array.isArray(rule.options)
+                                              ) {
+                                                enumOptions = rule.options;
+                                              } else {
+                                                // Store other validation rules
+                                                fieldValidationRules[
+                                                  rule.type
+                                                ] = rule.value || rule.options;
+                                              }
+                                            }
+                                          );
+                                        }
+
+                                        const fieldDescription =
+                                          field.description;
+
+                                        return (
+                                          <div
+                                            key={field.slug}
+                                            className="space-y-2"
+                                          >
+                                            <label className="block text-sm font-medium text-gray-700">
+                                              {fieldName}
+                                              {fieldRequired && (
+                                                <span className="text-red-500 ml-1">
+                                                  *
+                                                </span>
+                                              )}
+                                            </label>
+
+                                            {enumOptions.length > 0 ? (
+                                              // Enum field - show as dropdown
+                                              <select
+                                                value={fieldValue}
+                                                onChange={(e) =>
+                                                  handleTemplateFormChange(
+                                                    fieldKey,
+                                                    e.target.value
+                                                  )
+                                                }
+                                                className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 sm:text-sm"
+                                                required={fieldRequired}
+                                              >
+                                                {enumOptions.map(
+                                                  (
+                                                    option: string,
+                                                    index: number
+                                                  ) => (
+                                                    <option
+                                                      key={index}
+                                                      value={option}
+                                                    >
+                                                      {option}
+                                                    </option>
+                                                  )
+                                                )}
+                                              </select>
+                                            ) : fieldType === "textarea" ? (
+                                              // Textarea field
+                                              <textarea
+                                                value={fieldValue}
+                                                onChange={(e) =>
+                                                  handleTemplateFormChange(
+                                                    fieldKey,
+                                                    e.target.value
+                                                  )
+                                                }
+                                                rows={3}
+                                                className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 sm:text-sm resize-none"
+                                                placeholder={`Enter ${fieldName.toLowerCase()}`}
+                                                required={fieldRequired}
+                                              />
+                                            ) : fieldType === "number" ? (
+                                              // Number field
+                                              <input
+                                                type="number"
+                                                value={fieldValue}
+                                                onChange={(e) =>
+                                                  handleTemplateFormChange(
+                                                    fieldKey,
+                                                    e.target.value
+                                                  )
+                                                }
+                                                className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 sm:text-sm"
+                                                placeholder={`Enter ${fieldName.toLowerCase()}`}
+                                                required={fieldRequired}
+                                              />
+                                            ) : (
+                                              // Default text field
+                                              <input
+                                                type="text"
+                                                value={fieldValue}
+                                                onChange={(e) =>
+                                                  handleTemplateFormChange(
+                                                    fieldKey,
+                                                    e.target.value
+                                                  )
+                                                }
+                                                className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 sm:text-sm"
+                                                placeholder={`Enter ${fieldName.toLowerCase()}`}
+                                                required={fieldRequired}
+                                              />
+                                            )}
+
+                                            {fieldDescription && (
+                                              <p className="text-xs text-gray-500">
+                                                {fieldDescription}
+                                              </p>
+                                            )}
+
+                                            {Object.keys(fieldValidationRules)
+                                              .length > 0 && (
+                                              <div className="text-xs text-purple-600">
+                                                {fieldValidationRules.min && (
+                                                  <div>
+                                                    Min:{" "}
+                                                    {fieldValidationRules.min}
+                                                  </div>
+                                                )}
+                                                {fieldValidationRules.max && (
+                                                  <div>
+                                                    Max:{" "}
+                                                    {fieldValidationRules.max}
+                                                  </div>
+                                                )}
+                                                {fieldValidationRules.pattern && (
+                                                  <div>
+                                                    Pattern:{" "}
+                                                    {
+                                                      fieldValidationRules.pattern
+                                                    }
+                                                  </div>
+                                                )}
+                                              </div>
+                                            )}
+                                          </div>
+                                        );
+                                      })}
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          )
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
               ) : (

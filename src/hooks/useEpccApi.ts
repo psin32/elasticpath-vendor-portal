@@ -149,6 +149,51 @@ export const useEpccApi = (orgId?: string, storeId?: string) => {
   );
 
   /**
+   * Fetch product template by product ID
+   */
+  const fetchProductTemplates = useCallback(
+    async (productId: string) => {
+      return apiCall(async (client) => {
+        return await client.PCM.TemplateRelationships.All(productId);
+      }, "Failed to fetch product template");
+    },
+    [apiCall]
+  );
+
+  /**
+   * Fetch all templates
+   */
+  const fetchAllTemplates = useCallback(async () => {
+    return apiCall(async (client) => {
+      return await client.Flows.AllTemplates("products");
+    }, "Failed to fetch all templates");
+  }, [apiCall]);
+
+  /**
+   * Fetch template data
+   */
+  const fetchTemplateData = useCallback(
+    async (slug: string, productId: string) => {
+      return apiCall(async (client) => {
+        return await client.Flows.GetEntry(slug, productId);
+      }, "Failed to fetch template data");
+    },
+    [apiCall]
+  );
+
+  /**
+   * Fetch template fields
+   */
+  const fetchTemplateFields = useCallback(
+    async (slug: string) => {
+      return apiCall(async (client) => {
+        return await client.Flows.GetFields(slug);
+      }, "Failed to fetch template fields");
+    },
+    [apiCall]
+  );
+
+  /**
    * Fetch orders with pagination
    */
   const fetchOrders = useCallback(
@@ -371,6 +416,10 @@ export const useEpccApi = (orgId?: string, storeId?: string) => {
     createInventory,
     updateInventory,
     deleteInventory,
+    fetchProductTemplates,
+    fetchAllTemplates,
+    fetchTemplateData,
+    fetchTemplateFields,
 
     // Utility methods
     clearApiError: () => setApiError(null),

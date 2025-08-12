@@ -145,6 +145,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     localStorage.removeItem("selected_org_id");
     localStorage.removeItem("selected_store_id");
     localStorage.removeItem("epCredentials");
+    localStorage.removeItem("standalone_stores");
   };
 
   const value: AuthContextType = {
