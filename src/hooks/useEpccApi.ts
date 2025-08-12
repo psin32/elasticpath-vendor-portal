@@ -182,6 +182,18 @@ export const useEpccApi = (orgId?: string, storeId?: string) => {
   );
 
   /**
+   * Update template data
+   */
+  const updateTemplateData = useCallback(
+    async (slug: string, productId: string, request: any) => {
+      return apiCall(async (client) => {
+        return await client.Flows.UpdateEntry(slug, productId, request);
+      }, "Failed to update template data");
+    },
+    [apiCall]
+  );
+
+  /**
    * Fetch template fields
    */
   const fetchTemplateFields = useCallback(
@@ -420,6 +432,7 @@ export const useEpccApi = (orgId?: string, storeId?: string) => {
     fetchAllTemplates,
     fetchTemplateData,
     fetchTemplateFields,
+    updateTemplateData,
 
     // Utility methods
     clearApiError: () => setApiError(null),

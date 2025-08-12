@@ -3,7 +3,6 @@
 import React, { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { useEpccApi } from "../../../hooks/useEpccApi";
-import { DashboardHeader } from "../../../components/layout/DashboardHeader";
 import { useDashboard } from "../../../hooks/useDashboard";
 import { ImageOverlay } from "../../../components/ui/ImageOverlay";
 import { PcmProduct } from "@elasticpath/js-sdk";
@@ -43,15 +42,6 @@ export default function ProductEditPage() {
 
   // Attributes state
   const [attributesData, setAttributesData] = useState<Record<string, any>>({});
-  const [attributesLoading, setAttributesLoading] = useState(false);
-  const [editingAttribute, setEditingAttribute] = useState<string | null>(null);
-  const [editingAttributeValue, setEditingAttributeValue] =
-    useState<string>("");
-  const [newAttribute, setNewAttribute] = useState({
-    key: "",
-    value: "",
-  });
-  const [showNewAttributeForm, setShowNewAttributeForm] = useState(false);
 
   // Template state
   const [allTemplates, setAllTemplates] = useState<any[]>([]);
@@ -95,6 +85,7 @@ export default function ProductEditPage() {
     fetchProductTemplates,
     fetchTemplateFields,
     fetchTemplateData,
+    updateTemplateData,
   } = useEpccApi(selectedOrgId || undefined, selectedStoreId || undefined);
 
   // Form state for editable fields
@@ -234,14 +225,11 @@ export default function ProductEditPage() {
           }
         }
       }
-      console.log("fieldsData", fieldsData);
-      console.log("formData", formData);
       setTemplateFields(fieldsData);
       setTemplateFormData(formData);
 
       // After setting form data, fetch and populate template data for all templates
       setTimeout(async () => {
-        console.log("Starting template data population...");
         setTemplateDataInitializing(true);
 
         try {
@@ -251,14 +239,12 @@ export default function ProductEditPage() {
             if (template && template?.slug) {
               const slug = template.slug;
               try {
-                console.log(`Fetching template data for ${slug}...`);
                 await fetchTemplateDataForSlug(slug);
               } catch (err) {
                 console.error(`Error fetching template data for ${slug}:`, err);
               }
             }
           }
-          console.log("Template data population completed");
         } finally {
           setTemplateDataInitializing(false);
         }
@@ -289,11 +275,6 @@ export default function ProductEditPage() {
       }
     });
     setShowTemplateForms(initialShowState);
-
-    // Template data will be automatically fetched by loadTemplateFields
-    console.log(
-      "Template refresh completed - data should be automatically loaded"
-    );
   };
 
   // Fetch template data for a specific template
@@ -304,14 +285,12 @@ export default function ProductEditPage() {
       setTemplateDataLoading((prev) => ({ ...prev, [slug]: true }));
 
       const result = await fetchTemplateData(slug, productId);
-      console.log(`Template data result for ${slug}:`, result);
 
       if (result && result.data) {
         setTemplateData((prev) => ({ ...prev, [slug]: result.data }));
 
         // Populate form data with existing template data
         const existingData = result.data;
-        console.log(`Existing data for ${slug}:`, existingData);
 
         setTemplateFormData((prevFormData) => {
           const updatedFormData = { ...prevFormData };
@@ -321,16 +300,11 @@ export default function ProductEditPage() {
             if (key.startsWith(`${slug}_`)) {
               const fieldId = key.replace(`${slug}_`, "");
               if (existingData[fieldId] !== undefined) {
-                console.log(
-                  `Setting field ${key} to value:`,
-                  existingData[fieldId]
-                );
                 updatedFormData[key] = existingData[fieldId];
               }
             }
           });
 
-          console.log(`Updated form data for ${slug}:`, updatedFormData);
           return updatedFormData;
         });
 
@@ -348,65 +322,6 @@ export default function ProductEditPage() {
     }
   };
 
-  // Manually populate form with template data (for debugging)
-  const populateFormWithTemplateData = (slug: string) => {
-    const existingData = templateData[slug];
-    if (!existingData) {
-      setError(`No template data available for ${slug}`);
-      setTimeout(() => setError(null), 3000);
-      return;
-    }
-
-    console.log(`=== Manual Population for ${slug} ===`);
-    console.log(`Template data:`, existingData);
-    console.log(`Current form data:`, templateFormData);
-
-    setTemplateFormData((prevFormData) => {
-      const updatedFormData = { ...prevFormData };
-
-      // Update form data for fields that have existing values
-      Object.keys(prevFormData).forEach((key) => {
-        if (key.startsWith(`${slug}_`)) {
-          const fieldId = key.replace(`${slug}_`, "");
-          if (existingData[fieldId] !== undefined) {
-            console.log(
-              `Manually setting field ${key} to value:`,
-              existingData[fieldId]
-            );
-            updatedFormData[key] = existingData[fieldId];
-          }
-        }
-      });
-
-      console.log(`Updated form data for ${slug}:`, updatedFormData);
-      return updatedFormData;
-    });
-
-    const templateName =
-      allTemplates.find((t) => t.slug === slug)?.name || slug;
-    setSuccess(`Form populated with template data for ${templateName}`);
-    setTimeout(() => setSuccess(null), 3000);
-  };
-
-  // Debug function to show current state
-  const debugTemplateState = (slug: string) => {
-    console.log(`=== Debug State for ${slug} ===`);
-    console.log(`Template data:`, templateData[slug]);
-    console.log(`Template fields:`, templateFields[slug]);
-    console.log(
-      `Form data keys:`,
-      Object.keys(templateFormData).filter((key) => key.startsWith(`${slug}_`))
-    );
-    console.log(
-      `Form data values:`,
-      Object.fromEntries(
-        Object.entries(templateFormData).filter(([key]) =>
-          key.startsWith(`${slug}_`)
-        )
-      )
-    );
-  };
-
   // Handle saving individual template data
   const handleSaveTemplateData = async (templateSlug: string) => {
     try {
@@ -421,16 +336,44 @@ export default function ProductEditPage() {
         }
       });
 
-      console.log(`Saving template ${templateSlug} data:`, templateDataToSave);
+      const result = await updateTemplateData(
+        templateSlug,
+        productId,
+        templateDataToSave
+      );
 
-      // TODO: Implement actual save logic here
-      // This could be an API call to save the template field values
+      if (result === null) {
+        // API call failed, error is already set in apiCall
+        setError(`Failed to save template ${templateSlug} data`);
+        setTimeout(() => setError(null), 3000);
+        return;
+      }
 
       setSuccess(`Template ${templateSlug} data saved successfully`);
       setTimeout(() => setSuccess(null), 3000);
-    } catch (error) {
+    } catch (error: any) {
       console.error(`Error saving template ${templateSlug} data:`, error);
-      setError(`Failed to save template ${templateSlug} data`);
+
+      // Handle error array structure
+      if (error && Array.isArray(error)) {
+        const errorMessages = error
+          .map((err: any) => {
+            if (err.title && err.details) {
+              return `${err.title}: ${err.details}`;
+            } else if (err.title) {
+              return err.title;
+            } else if (err.details) {
+              return err.details;
+            }
+            return "Unknown error";
+          })
+          .join("; ");
+
+        setError(`Template save failed: ${errorMessages}`);
+      } else {
+        setError(`Failed to save template ${templateSlug} data`);
+      }
+
       setTimeout(() => setError(null), 3000);
     } finally {
       setSavingTemplate((prev) => ({ ...prev, [templateSlug]: false }));
@@ -444,7 +387,6 @@ export default function ProductEditPage() {
         setError(null);
         const productsData = await fetchProduct(productId);
         const foundProduct = productsData?.data;
-        console.log("productsData", productsData);
 
         if (foundProduct) {
           setProduct(foundProduct);
@@ -492,7 +434,6 @@ export default function ProductEditPage() {
   useEffect(() => {
     const init = async () => {
       if (activeTab === "attributes") {
-        console.log("loadAllTemplates");
         const [allTemplatesResult, productTemplatesResult] = await Promise.all([
           loadAllTemplates(),
           loadProductTemplates(),
@@ -500,7 +441,6 @@ export default function ProductEditPage() {
 
         // Load template fields with the actual data returned from the functions
         await loadTemplateFields(allTemplatesResult, productTemplatesResult);
-        console.log("loadTemplateFields", templateFields);
 
         // Initialize showTemplateForms state for each template
         const initialShowState: Record<string, boolean> = {};
@@ -1622,14 +1562,6 @@ export default function ProductEditPage() {
                                         const fieldRequired =
                                           field.required || false;
 
-                                        // Debug logging for field values
-                                        console.log(`Field ${fieldKey}:`, {
-                                          fieldName,
-                                          fieldValue,
-                                          templateFormData:
-                                            templateFormData[fieldKey],
-                                          allFormData: templateFormData,
-                                        });
                                         // Extract validation rules and find enum options
                                         let enumOptions: string[] = [];
                                         let fieldValidationRules: any = {};
