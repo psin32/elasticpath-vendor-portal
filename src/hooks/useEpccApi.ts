@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useEpccClientWithState } from "./useEpccClient";
 import { useAuth } from "../contexts/AuthContext";
-import type { ElasticPath } from "@elasticpath/js-sdk";
+import type { ElasticPath, FileBase } from "@elasticpath/js-sdk";
 
 /**
  * Enhanced hook for EPCC API interactions with error handling and loading states
@@ -360,6 +360,48 @@ export const useEpccApi = (orgId?: string, storeId?: string) => {
   );
 
   /**
+   * Create files
+   */
+  const createImageFile = useCallback(
+    async (url: string) => {
+      return apiCall(async (client) => {
+        return await client.Files.Link(url);
+      }, "Failed to create files");
+    },
+    [apiCall]
+  );
+
+  /**
+   * Create product image relationship
+   */
+  const createProductImageRelationship = useCallback(
+    async (productId: string, fileId: string) => {
+      return apiCall(async (client) => {
+        return await client.PCM.MainImageRelationships.Create(
+          productId,
+          fileId
+        );
+      }, "Failed to create product image relationship");
+    },
+    [apiCall]
+  );
+
+  /**
+   * Delete product image relationship
+   */
+  const deleteProductImageRelationship = useCallback(
+    async (productId: string, fileId: string) => {
+      return apiCall(async (client) => {
+        return await client.PCM.MainImageRelationships.Delete(
+          productId,
+          fileId
+        );
+      }, "Failed to delete product image relationship");
+    },
+    [apiCall]
+  );
+
+  /**
    * Fetch inventory by SKU
    */
   const fetchInventoryBySku = useCallback(
@@ -487,6 +529,9 @@ export const useEpccApi = (orgId?: string, storeId?: string) => {
     createProductTemplateRelationship,
     createTemplateData,
     createProduct,
+    createImageFile,
+    createProductImageRelationship,
+    deleteProductImageRelationship,
 
     // Utility methods
     clearApiError: () => setApiError(null),

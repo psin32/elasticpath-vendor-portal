@@ -4,16 +4,11 @@ import React, { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { useEpccApi } from "../../../hooks/useEpccApi";
 import { useDashboard } from "../../../hooks/useDashboard";
-import { ImageOverlay } from "../../../components/ui/ImageOverlay";
+
 import { ProductInventory } from "../../../components/products/ProductInventory";
 import { ProductAttributes } from "../../../components/products/ProductAttributes";
 import { ProductForm } from "../../../components/products/ProductForm";
 import { PcmProduct, PcmProductResponse } from "@elasticpath/js-sdk";
-
-interface ProductImage {
-  url: string;
-  alt: string;
-}
 
 export default function ProductEditPage() {
   const router = useRouter();
@@ -21,10 +16,7 @@ export default function ProductEditPage() {
   const productId = params.productId as string;
 
   const [product, setProduct] = useState<PcmProductResponse | null>(null);
-  const [mainImage, setMainImage] = useState<ProductImage | null>(null);
-  const [selectedImage, setSelectedImage] = useState<ProductImage | null>(null);
   const [productLoading, setProductLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
@@ -41,15 +33,35 @@ export default function ProductEditPage() {
     selectedStoreId || undefined
   );
 
-  // Form state for editable fields
-  const [formData, setFormData] = useState({
-    name: "",
-    description: "",
-    slug: "",
-    sku: "",
-    status: "draft",
-    commodity_type: "physical",
-  });
+  const handleEditSuccess = (updatedProduct: PcmProduct) => {
+    setSuccess("Product updated successfully!");
+    // Refresh the product data
+    if (productId) {
+      const loadProduct = async () => {
+        try {
+          setProductLoading(true);
+          setError(null);
+          const productsData = await fetchProduct(productId);
+          if (productsData) {
+            setProduct(productsData);
+          }
+        } catch (err) {
+          setError("Failed to reload product");
+          console.error("Error reloading product:", err);
+        } finally {
+          setProductLoading(false);
+        }
+      };
+      loadProduct();
+    }
+    setTimeout(() => setSuccess(null), 3000);
+  };
+
+  const handleEditCancel = () => {
+    // For edit mode, cancel just clears any success/error messages
+    setSuccess(null);
+    setError(null);
+  };
 
   useEffect(() => {
     const loadProduct = async () => {
@@ -74,18 +86,6 @@ export default function ProductEditPage() {
       loadProduct();
     }
   }, [productId, fetchProduct]);
-
-  const handleInputChange = (
-    e: React.ChangeEvent<
-      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
-    >
-  ) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-  };
 
   if (productLoading) {
     return (
@@ -299,6 +299,8 @@ export default function ProductEditPage() {
                   productId={product.data.id}
                   selectedOrgId={selectedOrgId || undefined}
                   selectedStoreId={selectedStoreId || undefined}
+                  onSuccess={handleEditSuccess}
+                  onCancel={handleEditCancel}
                 />
               )}
               {/* Tab Content */}
@@ -326,14 +328,6 @@ export default function ProductEditPage() {
           </div>
         )}
       </div>
-
-      {selectedImage && (
-        <ImageOverlay
-          imageUrl={selectedImage.url}
-          altText={selectedImage.alt}
-          onClose={() => setSelectedImage(null)}
-        />
-      )}
     </div>
   );
 }

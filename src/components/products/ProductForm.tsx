@@ -36,19 +36,25 @@ export const ProductForm: React.FC<ProductFormProps> = ({
   const [mainImage, setMainImage] = useState<{
     url: string;
     alt: string;
+    fileId?: string;
   } | null>(null);
   const [selectedImage, setSelectedImage] = useState<{
     url: string;
     alt: string;
   } | null>(null);
+  const [imageUrl, setImageUrl] = useState("");
+  const [uploadingImage, setUploadingImage] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
-  const { createProduct, updateProduct } = useEpccApi(
-    selectedOrgId,
-    selectedStoreId
-  );
+  const {
+    createProduct,
+    updateProduct,
+    createImageFile,
+    createProductImageRelationship,
+    deleteProductImageRelationship,
+  } = useEpccApi(selectedOrgId, selectedStoreId);
 
   // Initialize form data when editing
   useEffect(() => {
@@ -69,6 +75,8 @@ export const ProductForm: React.FC<ProductFormProps> = ({
             product.included?.main_images?.[0]?.link?.href ||
             `https://placehold.co/400x400?text=Product+Image`,
           alt: product.data.attributes?.name || "Product Image",
+          // Note: For existing products, we don't have the fileId
+          // The image relationship already exists
         });
       }
     }
@@ -114,11 +122,27 @@ export const ProductForm: React.FC<ProductFormProps> = ({
       }
 
       if (result) {
-        setSuccess(
-          mode === "create"
-            ? "Product created successfully!"
-            : "Product updated successfully!"
-        );
+        // If we have a main image with fileId, create the product image relationship
+        if (mainImage?.fileId && mode === "create") {
+          try {
+            const currentProductId = result.data.id;
+            await createProductImageRelationship(
+              currentProductId,
+              mainImage.fileId
+            );
+            setSuccess("Product image relationship created successfully!");
+          } catch (err) {
+            console.error("Error creating product image relationship:", err);
+            setError("Product saved but failed to create image relationship.");
+            setTimeout(() => setError(null), 5000);
+          }
+        } else {
+          setSuccess(
+            mode === "create"
+              ? "Product created successfully!"
+              : "Product updated successfully!"
+          );
+        }
 
         if (onSuccess) {
           onSuccess(result.data);
@@ -134,6 +158,58 @@ export const ProductForm: React.FC<ProductFormProps> = ({
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleImageUpload = async () => {
+    if (!imageUrl.trim()) {
+      setError("Please enter an image URL");
+      return;
+    }
+
+    setUploadingImage(true);
+    setError(null);
+
+    try {
+      // Create the image file
+      const imageFile = await createImageFile(imageUrl);
+
+      if (imageFile && imageFile.data) {
+        const fileId = imageFile.data.id;
+
+        if (mode === "edit") {
+          const mainImageId = product?.data.relationships?.main_image?.data.id;
+
+          if (mainImageId) {
+            await deleteProductImageRelationship(productId!, mainImageId);
+            await createProductImageRelationship(productId!, fileId);
+          } else {
+            await createProductImageRelationship(productId!, fileId);
+          }
+        }
+
+        // Update the main image state
+        setMainImage({
+          url: imageUrl,
+          alt: formData.name || "Product Image",
+          fileId,
+        });
+
+        setImageUrl("");
+        setSuccess("Image uploaded successfully!");
+        setTimeout(() => setSuccess(null), 3000);
+      }
+    } catch (err) {
+      console.error("Error uploading image:", err);
+      setError("Failed to upload image. Please try again.");
+      setTimeout(() => setError(null), 5000);
+    } finally {
+      setUploadingImage(false);
+    }
+  };
+
+  const handleReplaceImage = () => {
+    setMainImage(null);
+    setImageUrl("");
   };
 
   const handleCancel = () => {
@@ -199,6 +275,11 @@ export const ProductForm: React.FC<ProductFormProps> = ({
                 <label className="block text-sm font-semibold text-gray-700 mb-4">
                   Main Image
                 </label>
+                <p className="text-xs text-gray-500 mb-4">
+                  {mode === "create"
+                    ? "Upload an image to associate with this product. You can enter an image URL and it will be automatically uploaded and linked to the product."
+                    : "Product image is displayed below. You can replace it by removing the current image and uploading a new one."}
+                </p>
                 <div className="relative">
                   <div className="w-full flex justify-center">
                     <img
@@ -217,43 +298,100 @@ export const ProductForm: React.FC<ProductFormProps> = ({
                     Image size: 400×400 pixels • Click to view larger
                   </p>
                 </div>
-              </div>
 
-              {/* Quick Stats */}
-              <div className="mt-6 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-6 border border-blue-200">
-                <h3 className="text-sm font-semibold text-blue-900 mb-4">
-                  Quick Stats
-                </h3>
-                <div className="space-y-3">
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-blue-700">Status</span>
-                    <span
-                      className={`px-2 py-1 text-xs font-medium rounded-full ${
-                        formData.status === "live"
-                          ? "bg-green-100 text-green-800"
-                          : "bg-yellow-100 text-yellow-800"
-                      }`}
-                    >
-                      {formData.status || "Unknown"}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-blue-700">Type</span>
-                    <span className="text-sm font-medium text-blue-900">
-                      {formData.commodity_type || "Unknown"}
-                    </span>
-                  </div>
-                  {mode === "edit" && product?.data?.meta?.created_at && (
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-blue-700">Created</span>
-                      <span className="text-sm font-medium text-blue-900">
-                        {new Date(
-                          product.data.meta.created_at
-                        ).toLocaleDateString()}
-                      </span>
+                {/* Image Upload Section */}
+                {!mainImage && (
+                  <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                    <h4 className="text-sm font-medium text-blue-900 mb-3">
+                      {mode === "create"
+                        ? "Add Product Image"
+                        : "Add or Replace Product Image"}
+                    </h4>
+                    <div className="flex space-x-2">
+                      <input
+                        type="url"
+                        value={imageUrl}
+                        onChange={(e) => setImageUrl(e.target.value)}
+                        placeholder="Enter image URL (e.g., https://example.com/image.jpg)"
+                        className="flex-1 px-3 py-2 text-sm border border-blue-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      />
+                      <button
+                        type="button"
+                        onClick={handleImageUpload}
+                        disabled={uploadingImage || !imageUrl.trim()}
+                        className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
+                      >
+                        {uploadingImage ? (
+                          <div className="flex items-center">
+                            <svg
+                              className="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
+                              xmlns="http://www.w3.org/2000/svg"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                            >
+                              <circle
+                                className="opacity-25"
+                                cx="12"
+                                cy="12"
+                                r="10"
+                                stroke="currentColor"
+                                strokeWidth="4"
+                              ></circle>
+                              <path
+                                className="opacity-25"
+                                fill="currentColor"
+                                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                              ></path>
+                            </svg>
+                            Uploading...
+                          </div>
+                        ) : (
+                          "Upload"
+                        )}
+                      </button>
                     </div>
-                  )}
-                </div>
+                    <p className="mt-2 text-xs text-blue-600">
+                      {mode === "create"
+                        ? "Enter a valid image URL to upload and associate with this product"
+                        : "Enter a valid image URL to replace the current product image"}
+                    </p>
+                  </div>
+                )}
+
+                {/* Image Management Section */}
+                {mainImage && (
+                  <div className="mt-6 p-4 bg-green-50 border border-green-200 rounded-lg">
+                    <h4 className="text-sm font-medium text-green-900 mb-3">
+                      Product Image
+                    </h4>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-3">
+                        <img
+                          src={mainImage.url}
+                          alt={mainImage.alt}
+                          className="w-16 h-16 rounded-lg object-cover border border-green-200"
+                        />
+                        <div>
+                          <p className="text-sm font-medium text-green-900">
+                            {mainImage.alt}
+                          </p>
+                          <p className="text-xs text-green-600">
+                            {mainImage.fileId
+                              ? "Image uploaded successfully"
+                              : "Image ready"}
+                          </p>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleReplaceImage}
+                        className="text-sm text-blue-600 hover:text-blue-800 font-medium"
+                      >
+                        Replace
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 
