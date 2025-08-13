@@ -486,21 +486,50 @@ export const useEpccApi = (orgId?: string, storeId?: string) => {
   );
 
   /**
-   * Fetch prices with optional filtering
+   * Fetch prices by SKU
    */
   const fetchPricesBySKU = useCallback(
     async (sku: string) => {
       return apiCall(async (client) => {
         const pricebookId = "";
-        console.log("fetching prices by sku", sku);
         const response = await client.PriceBooks.Prices.Filter({
           eq: {
             sku: sku,
           },
         }).All({ pricebookId });
-        console.log("response", response);
         return response;
       }, "Failed to fetch prices");
+    },
+    [apiCall]
+  );
+
+  /**
+   * Update price
+   */
+  const updatePrice = useCallback(
+    async (priceId: string, pricebookId: string, body: any) => {
+      return apiCall(async (client) => {
+        return await client.PriceBooks.Prices.Update({
+          pricebookId,
+          priceId,
+          body,
+        });
+      }, "Failed to update price");
+    },
+    [apiCall]
+  );
+
+  /**
+   * Create price
+   */
+  const createPrice = useCallback(
+    async (pricebookId: string, body: any) => {
+      return apiCall(async (client) => {
+        return await client.PriceBooks.Prices.Create({
+          pricebookId,
+          body,
+        });
+      }, "Failed to create price");
     },
     [apiCall]
   );
@@ -577,6 +606,8 @@ export const useEpccApi = (orgId?: string, storeId?: string) => {
     fetchPricesBySKU,
     fetchAllPricebooks,
     fetchCurrencies,
+    updatePrice,
+    createPrice,
 
     // Utility methods
     clearApiError: () => setApiError(null),
