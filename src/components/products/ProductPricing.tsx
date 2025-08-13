@@ -322,174 +322,6 @@ export const ProductPricing: React.FC<ProductPricingProps> = ({
     );
   }
 
-  if (!prices.length) {
-    return (
-      <div className="space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h3 className="text-lg font-semibold text-gray-900">
-              Product Pricing
-            </h3>
-          </div>
-          <div className="flex space-x-3">
-            <button
-              onClick={startNewPriceCreation}
-              disabled={getUnattachedPricebooks().length === 0}
-              className="inline-flex items-center px-3 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors duration-200"
-            >
-              <svg
-                className="w-4 h-4 mr-2"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 6v6m0 0v6m0-6h6m-6 0H6"
-                />
-              </svg>
-              Create Price
-            </button>
-            <button
-              onClick={loadAllData}
-              className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors duration-200"
-            >
-              <svg
-                className="w-4 h-4 mr-2"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                />
-              </svg>
-              Refresh
-            </button>
-          </div>
-        </div>
-
-        {/* No Prices Message */}
-        <div className="text-center py-8">
-          <div className="inline-flex items-center px-4 py-2 bg-yellow-100 text-yellow-800 rounded-md">
-            <svg
-              className="w-5 h-5 mr-2"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"
-              />
-            </svg>
-            <h3 className="mt-2 text-sm font-medium text-yellow-800">
-              No Pricing Found
-            </h3>
-          </div>
-        </div>
-
-        {/* New Price Creation Form */}
-        {showNewPriceForm && (
-          <div className="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden">
-            <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
-              <h4 className="text-lg font-medium text-gray-900">
-                Create New Price
-              </h4>
-              <p className="text-sm text-gray-600">
-                Add pricing for a new pricebook
-              </p>
-            </div>
-            <div className="p-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Pricebook Selection */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Select Pricebook
-                  </label>
-                  <select
-                    value={newPricePricebookId}
-                    onChange={(e) => setNewPricePricebookId(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
-                    disabled={creatingNewPrice}
-                  >
-                    <option value="">Select Pricebook</option>
-                    {getUnattachedPricebooks().map((pricebook) => (
-                      <option key={pricebook.id} value={pricebook.id}>
-                        {pricebook.attributes?.name || pricebook.id}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* Currency Inputs */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Currency Prices
-                  </label>
-                  <div className="space-y-2">
-                    {currencies.map((currency) => {
-                      const currencyCode = currency.code || currency.id;
-                      return (
-                        <div
-                          key={currency.id}
-                          className="flex items-center space-x-2"
-                        >
-                          <span className="text-sm font-medium text-gray-600 w-12">
-                            {currencyCode.toUpperCase()}:
-                          </span>
-                          <input
-                            type="text"
-                            value={newPriceValues[currencyCode] || ""}
-                            onChange={(e) =>
-                              setNewPriceValues({
-                                ...newPriceValues,
-                                [currencyCode]: e.target.value,
-                              })
-                            }
-                            className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                            placeholder="0.00"
-                            disabled={creatingNewPrice}
-                          />
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              </div>
-
-              {/* Action Buttons */}
-              <div className="flex justify-end space-x-3 mt-6 pt-4 border-t border-gray-200">
-                <button
-                  onClick={cancelNewPriceCreation}
-                  disabled={creatingNewPrice}
-                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleNewPriceCreation}
-                  disabled={!newPricePricebookId || creatingNewPrice}
-                  className="px-4 py-2 text-sm font-medium text-white bg-green-600 border border-transparent rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50"
-                >
-                  {creatingNewPrice ? "Creating..." : "Create Price"}
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
-    );
-  }
-
   // Get unique pricebook IDs from prices
   const uniquePricebookIds = Array.from(
     new Set(prices.map((p) => p.meta?.pricebook_id).filter(Boolean))
@@ -662,60 +494,30 @@ export const ProductPricing: React.FC<ProductPricingProps> = ({
                   </tr>
                 );
               })}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {/* New Price Creation Form */}
-      {showNewPriceForm && (
-        <div className="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden">
-          <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
-            <h4 className="text-lg font-medium text-gray-900">
-              Create New Price
-            </h4>
-            <p className="text-sm text-gray-600">
-              Add pricing for a new pricebook
-            </p>
-          </div>
-          <div className="p-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Pricebook Selection */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Select Pricebook
-                </label>
-                <select
-                  value={newPricePricebookId}
-                  onChange={(e) => setNewPricePricebookId(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
-                  disabled={creatingNewPrice}
-                >
-                  <option value="">Select Pricebook</option>
-                  {getUnattachedPricebooks().map((pricebook) => (
-                    <option key={pricebook.id} value={pricebook.id}>
-                      {pricebook.attributes?.name || pricebook.id}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Currency Inputs */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Currency Prices
-                </label>
-                <div className="space-y-2">
+              {showNewPriceForm && (
+                <tr className="bg-blue-50 border-t border-blue-200">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                    <select
+                      value={newPricePricebookId}
+                      onChange={(e) => setNewPricePricebookId(e.target.value)}
+                      className="w-full px-2 py-1 border border-blue-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      disabled={creatingNewPrice}
+                    >
+                      <option value="">Select Pricebook</option>
+                      {getUnattachedPricebooks().map((pricebook) => (
+                        <option key={pricebook.id} value={pricebook.id}>
+                          {pricebook.attributes?.name || pricebook.id}
+                        </option>
+                      ))}
+                    </select>
+                  </td>
                   {currencies.map((currency) => {
                     const currencyCode = currency.code || currency.id;
                     return (
-                      <div
+                      <td
                         key={currency.id}
-                        className="flex items-center space-x-2"
+                        className="px-6 py-4 whitespace-nowrap text-sm text-gray-900"
                       >
-                        <span className="text-sm font-medium text-gray-600 w-12">
-                          {currencyCode.toUpperCase()}:
-                        </span>
                         <input
                           type="text"
                           value={newPriceValues[currencyCode] || ""}
@@ -725,37 +527,37 @@ export const ProductPricing: React.FC<ProductPricingProps> = ({
                               [currencyCode]: e.target.value,
                             })
                           }
-                          className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          className="w-24 px-2 py-1 text-sm border border-blue-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                           placeholder="0.00"
                           disabled={creatingNewPrice}
                         />
-                      </div>
+                      </td>
                     );
                   })}
-                </div>
-              </div>
-            </div>
-
-            {/* Action Buttons */}
-            <div className="flex justify-end space-x-3 mt-6 pt-4 border-t border-gray-200">
-              <button
-                onClick={cancelNewPriceCreation}
-                disabled={creatingNewPrice}
-                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleNewPriceCreation}
-                disabled={!newPricePricebookId || creatingNewPrice}
-                className="px-4 py-2 text-sm font-medium text-white bg-green-600 border border-transparent rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50"
-              >
-                {creatingNewPrice ? "Creating..." : "Create Price"}
-              </button>
-            </div>
-          </div>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    <div className="flex space-x-2">
+                      <button
+                        onClick={handleNewPriceCreation}
+                        disabled={!newPricePricebookId || creatingNewPrice}
+                        className="px-2 py-1 text-xs bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50"
+                      >
+                        {creatingNewPrice ? "..." : "Create"}
+                      </button>
+                      <button
+                        onClick={cancelNewPriceCreation}
+                        disabled={creatingNewPrice}
+                        className="px-2 py-1 text-xs bg-gray-600 text-white rounded hover:bg-gray-700 disabled:opacity-50"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
         </div>
-      )}
+      </div>
     </div>
   );
 };
