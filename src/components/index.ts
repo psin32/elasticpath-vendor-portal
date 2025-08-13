@@ -18,3 +18,4 @@ export { ProductInventory } from "./products/ProductInventory";
 export { ProductAttributes } from "./products/ProductAttributes";
 export { ProductForm } from "./products/ProductForm";
 export { ProductPricing } from "./products/ProductPricing";
+export { ProductCategories } from "./products/ProductCategories";

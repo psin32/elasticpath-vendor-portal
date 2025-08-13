@@ -544,6 +544,39 @@ export const useEpccApi = (orgId?: string, storeId?: string) => {
   }, [apiCall]);
 
   /**
+   * Fetch all hierarchies
+   */
+  const fetchAllHierarchies = useCallback(async () => {
+    return apiCall(async (client) => {
+      return await client.Hierarchies.All();
+    }, "Failed to fetch hierarchies");
+  }, [apiCall]);
+
+  /**
+   * Fetch all nodes for a hierarchy
+   */
+  const fetchHierarchyNodes = useCallback(
+    async (hierarchyId: string) => {
+      return apiCall(async (client) => {
+        return await client.Hierarchies.Nodes.All({ hierarchyId });
+      }, "Failed to fetch hierarchies nodes");
+    },
+    [apiCall]
+  );
+
+  /**
+   * Fetch product nodes
+   */
+  const fetchProductNodes = useCallback(
+    async (productId: string) => {
+      return apiCall(async (client) => {
+        return await client.PCM.GetProductNodes(productId);
+      }, "Failed to fetch product nodes");
+    },
+    [apiCall]
+  );
+
+  /**
    * Fetch all currencies
    */
   const fetchCurrencies = useCallback(async () => {
@@ -608,6 +641,9 @@ export const useEpccApi = (orgId?: string, storeId?: string) => {
     fetchCurrencies,
     updatePrice,
     createPrice,
+    fetchAllHierarchies,
+    fetchHierarchyNodes,
+    fetchProductNodes,
 
     // Utility methods
     clearApiError: () => setApiError(null),

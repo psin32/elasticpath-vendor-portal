@@ -9,6 +9,7 @@ import { ProductInventory } from "../../../components/products/ProductInventory"
 import { ProductAttributes } from "../../../components/products/ProductAttributes";
 import { ProductForm } from "../../../components/products/ProductForm";
 import { ProductPricing } from "../../../components/products/ProductPricing";
+import { ProductCategories } from "../../../components/products/ProductCategories";
 import { PcmProduct, PcmProductResponse } from "@elasticpath/js-sdk";
 
 export default function ProductEditPage() {
@@ -22,7 +23,7 @@ export default function ProductEditPage() {
   const [success, setSuccess] = useState<string | null>(null);
 
   const [activeTab, setActiveTab] = useState<
-    "details" | "attributes" | "inventory" | "pricing"
+    "details" | "attributes" | "inventory" | "pricing" | "categories"
   >("details");
 
   // Use the same dashboard state management
@@ -292,6 +293,16 @@ export default function ProductEditPage() {
                     Inventory
                   </button>
                   <button
+                    onClick={() => setActiveTab("categories")}
+                    className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                      activeTab === "categories"
+                        ? "border-indigo-500 text-indigo-600"
+                        : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                    }`}
+                  >
+                    Categories
+                  </button>
+                  <button
                     onClick={() => setActiveTab("pricing")}
                     className={`py-2 px-1 border-b-2 font-medium text-sm ${
                       activeTab === "pricing"
@@ -340,6 +351,15 @@ export default function ProductEditPage() {
                 <div className="mt-8">
                   <ProductPricing
                     productSku={product?.data.attributes?.sku || undefined}
+                    selectedOrgId={selectedOrgId || undefined}
+                    selectedStoreId={selectedStoreId || undefined}
+                  />
+                </div>
+              )}
+              {activeTab === "categories" && (
+                <div className="mt-8">
+                  <ProductCategories
+                    productId={productId}
                     selectedOrgId={selectedOrgId || undefined}
                     selectedStoreId={selectedStoreId || undefined}
                   />
