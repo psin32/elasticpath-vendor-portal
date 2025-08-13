@@ -27,6 +27,7 @@ export const ProductCategories: React.FC<ProductCategoriesProps> = ({
     fetchAllHierarchies,
     fetchHierarchyNodes,
     attachProductToNode,
+    detachProductFromNode,
   } = useEpccApi(selectedOrgId, selectedStoreId);
   const { showToast } = useToast();
 
@@ -182,12 +183,30 @@ export const ProductCategories: React.FC<ProductCategoriesProps> = ({
       setEditingNodeId(null);
       return;
     }
-    // Placeholder: update local state; integrate attach/detach API when available
-    setProductNodeIds((prev) =>
-      prev.map((id) => (id === nodeId ? chosen : id))
-    );
-    showToast("Category updated", "success");
-    setEditingNodeId(null);
+    try {
+      await detachProductFromNode(productId, current.hierarchyId, nodeId);
+      await attachProductToNode(productId, current.hierarchyId, chosen);
+      setProductNodeIds((prev) =>
+        prev.map((id) => (id === nodeId ? chosen : id))
+      );
+      showToast("Category updated", "success");
+    } catch (e) {
+      showToast("Failed to update category", "error");
+    } finally {
+      setEditingNodeId(null);
+    }
+  };
+
+  const handleDelete = async (nodeId: string) => {
+    const info = nodeIdToInfo[nodeId];
+    if (!info) return;
+    try {
+      await detachProductFromNode(productId, info.hierarchyId, nodeId);
+      setProductNodeIds((prev) => prev.filter((id) => id !== nodeId));
+      showToast("Category removed", "success");
+    } catch (e) {
+      showToast("Failed to remove category", "error");
+    }
   };
 
   const startAddRow = () => {
@@ -433,12 +452,20 @@ export const ProductCategories: React.FC<ProductCategoriesProps> = ({
                             </button>
                           </div>
                         ) : (
-                          <button
-                            onClick={() => handleEdit(r.nodeId)}
-                            className="px-2 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700"
-                          >
-                            Edit
-                          </button>
+                          <div className="flex space-x-2">
+                            <button
+                              onClick={() => handleEdit(r.nodeId)}
+                              className="px-2 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700"
+                            >
+                              Edit
+                            </button>
+                            <button
+                              onClick={() => handleDelete(r.nodeId)}
+                              className="px-2 py-1 text-xs bg-red-600 text-white rounded hover:bg-red-700"
+                            >
+                              Delete
+                            </button>
+                          </div>
                         )}
                       </td>
                     </tr>
