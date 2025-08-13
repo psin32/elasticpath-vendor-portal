@@ -3,7 +3,11 @@
 import { useCallback, useEffect, useState } from "react";
 import { useEpccClientWithState } from "./useEpccClient";
 import { useAuth } from "../contexts/AuthContext";
-import type { ElasticPath, FileBase } from "@elasticpath/js-sdk";
+import type {
+  ElasticPath,
+  FileBase,
+  PriceBookFilter,
+} from "@elasticpath/js-sdk";
 
 /**
  * Enhanced hook for EPCC API interactions with error handling and loading states
@@ -481,6 +485,44 @@ export const useEpccApi = (orgId?: string, storeId?: string) => {
     [apiCall]
   );
 
+  /**
+   * Fetch prices with optional filtering
+   */
+  const fetchPricesBySKU = useCallback(
+    async (sku: string) => {
+      return apiCall(async (client) => {
+        const pricebookId = "";
+        console.log("fetching prices by sku", sku);
+        const response = await client.PriceBooks.Prices.Filter({
+          eq: {
+            sku: sku,
+          },
+        }).All({ pricebookId });
+        console.log("response", response);
+        return response;
+      }, "Failed to fetch prices");
+    },
+    [apiCall]
+  );
+
+  /**
+   * Fetch all pricebooks
+   */
+  const fetchAllPricebooks = useCallback(async () => {
+    return apiCall(async (client) => {
+      return await client.PriceBooks.Limit(100).Offset(0).All();
+    }, "Failed to fetch pricebooks");
+  }, [apiCall]);
+
+  /**
+   * Fetch all currencies
+   */
+  const fetchCurrencies = useCallback(async () => {
+    return apiCall(async (client) => {
+      return await client.Currencies.All();
+    }, "Failed to fetch currencies");
+  }, [apiCall]);
+
   // Reset API error when client changes
   useEffect(() => {
     if (isReady) {
@@ -532,6 +574,9 @@ export const useEpccApi = (orgId?: string, storeId?: string) => {
     createImageFile,
     createProductImageRelationship,
     deleteProductImageRelationship,
+    fetchPricesBySKU,
+    fetchAllPricebooks,
+    fetchCurrencies,
 
     // Utility methods
     clearApiError: () => setApiError(null),
