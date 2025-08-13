@@ -6,6 +6,7 @@ import { useAuth } from "../contexts/AuthContext";
 import type {
   ElasticPath,
   FileBase,
+  PcmProductAttachmentBody,
   PriceBookFilter,
 } from "@elasticpath/js-sdk";
 
@@ -577,6 +578,36 @@ export const useEpccApi = (orgId?: string, storeId?: string) => {
   );
 
   /**
+   * Attach a product to a hierarchy node
+   */
+  const attachProductToNode = useCallback(
+    async (productId: string, hierarchyId: string, nodeId: string) => {
+      return apiCall(async (client) => {
+        return await client.PCM.AttachNodes({
+          filter: `eq(id,${productId})`,
+          node_ids: [nodeId],
+        });
+      }, "Failed to attach product to node");
+    },
+    [apiCall]
+  );
+
+  /**
+   * Detach a product from a hierarchy node
+   */
+  const detachProductFromNode = useCallback(
+    async (productId: string, hierarchyId: string, nodeId: string) => {
+      return apiCall(async (client) => {
+        return await client.PCM.DetachNodes({
+          filter: `eq(id,${productId})`,
+          node_ids: [nodeId],
+        });
+      }, "Failed to detach product from node");
+    },
+    [apiCall]
+  );
+
+  /**
    * Fetch all currencies
    */
   const fetchCurrencies = useCallback(async () => {
@@ -644,6 +675,8 @@ export const useEpccApi = (orgId?: string, storeId?: string) => {
     fetchAllHierarchies,
     fetchHierarchyNodes,
     fetchProductNodes,
+    attachProductToNode,
+    detachProductFromNode,
 
     // Utility methods
     clearApiError: () => setApiError(null),
