@@ -17,6 +17,10 @@ export const SidebarNavigation: React.FC<SidebarNavigationProps> = ({
       return "products";
     } else if (pathname.startsWith("/orders")) {
       return "orders";
+    } else if (pathname.startsWith("/bulk-upload")) {
+      return "bulk-upload";
+    } else if (pathname.startsWith("/templates")) {
+      return "templates";
     }
     return activeSection; // fallback to prop if no URL match
   };
@@ -62,6 +66,44 @@ export const SidebarNavigation: React.FC<SidebarNavigationProps> = ({
         </svg>
       ),
     },
+    // {
+    //   id: "bulk-upload" as const,
+    //   label: "Bulk Upload",
+    //   icon: (
+    //     <svg
+    //       className="mr-3 h-5 w-5"
+    //       fill="none"
+    //       stroke="currentColor"
+    //       viewBox="0 0 24 24"
+    //     >
+    //       <path
+    //         strokeLinecap="round"
+    //         strokeLinejoin="round"
+    //         strokeWidth={2}
+    //         d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+    //       />
+    //     </svg>
+    //   ),
+    // },
+    // {
+    //   id: "templates" as const,
+    //   label: "Templates",
+    //   icon: (
+    //     <svg
+    //       className="mr-3 h-5 w-5"
+    //       fill="none"
+    //       stroke="currentColor"
+    //       viewBox="0 0 24 24"
+    //     >
+    //       <path
+    //         strokeLinecap="round"
+    //         strokeLinejoin="round"
+    //         strokeWidth={2}
+    //         d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V9a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"
+    //       />
+    //     </svg>
+    //   ),
+    // },
   ];
 
   return (
@@ -83,6 +125,10 @@ export const SidebarNavigation: React.FC<SidebarNavigationProps> = ({
                     router.push("/products");
                   } else if (item.id === "orders") {
                     router.push("/orders");
+                    // } else if (item.id === "bulk-upload") {
+                    //   router.push("/bulk-upload");
+                    // } else if (item.id === "templates") {
+                    //   router.push("/templates");
                   }
                 }}
                 className={`w-full text-left px-4 py-2 text-sm font-medium rounded-md mx-2 transition-all duration-200 ${

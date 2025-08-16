@@ -8,7 +8,7 @@ export { default as LoginForm } from "./forms/LoginForm";
 // UI Components
 export { OrganizationSelector } from "./ui/OrganizationSelector";
 export { StoreSelector } from "./ui/StoreSelector";
-export { Toast } from "./ui/Toast";
+export { default as Toast } from "./ui/Toast";
 
 // Product Components
 export { OrganizationsList } from "./products/OrganizationsList";

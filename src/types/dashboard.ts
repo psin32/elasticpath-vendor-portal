@@ -5,6 +5,8 @@ export type DashboardSection =
   | "orders"
   | "accounts"
   | "inventory"
+  | "bulk-upload"
+  | "templates"
   | "api-demo";
 
 export type StoreFilterMode = "all" | "organization";
