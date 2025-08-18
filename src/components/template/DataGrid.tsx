@@ -32,6 +32,8 @@ const DataGrid: React.FC<DataGridProps> = ({
   const [editValue, setEditValue] = useState<string>("");
   const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
   const [selectAll, setSelectAll] = useState(false);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [localData, setLocalData] = useState<TemplateData[]>(data);
   const inputRef = useRef<
     HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
   >(null);
@@ -39,6 +41,12 @@ const DataGrid: React.FC<DataGridProps> = ({
 
   // Sort fields by order
   const sortedFields = [...template.fields].sort((a, b) => a.order - b.order);
+
+  // Update local data when prop data changes
+  useEffect(() => {
+    setLocalData(data);
+    setHasUnsavedChanges(false);
+  }, [data]);
 
   useEffect(() => {
     if (editingCell && inputRef.current) {
@@ -93,8 +101,8 @@ const DataGrid: React.FC<DataGridProps> = ({
         convertedValue = editValue;
     }
 
-    // Update the data
-    const updatedData = data.map((row) => {
+    // Update the local data
+    const updatedData = localData.map((row) => {
       if (row.id === rowId) {
         const newRowData = { ...row.data, [fieldName]: convertedValue };
         const errors = onValidate(template, newRowData);
@@ -112,7 +120,8 @@ const DataGrid: React.FC<DataGridProps> = ({
       return row;
     });
 
-    onDataChange(updatedData);
+    setLocalData(updatedData);
+    setHasUnsavedChanges(true);
     setEditingCell(null);
     setEditValue("");
   };
@@ -122,10 +131,47 @@ const DataGrid: React.FC<DataGridProps> = ({
     setEditValue("");
   };
 
+  const moveToNextCell = () => {
+    if (!editingCell) return;
+
+    const currentRowIndex = localData.findIndex(
+      (row) => row.id === editingCell.rowId
+    );
+    const currentFieldIndex = sortedFields.findIndex(
+      (field) => field.name === editingCell.fieldName
+    );
+
+    if (currentRowIndex === -1 || currentFieldIndex === -1) return;
+
+    // Move to next column
+    if (currentFieldIndex < sortedFields.length - 1) {
+      const nextField = sortedFields[currentFieldIndex + 1];
+      const currentRow = localData[currentRowIndex];
+      handleCellClick(
+        editingCell.rowId,
+        nextField.name,
+        currentRow.data[nextField.name]
+      );
+    } else if (currentRowIndex < localData.length - 1) {
+      // Move to first column of next row
+      const nextRow = localData[currentRowIndex + 1];
+      const firstField = sortedFields[0];
+      handleCellClick(
+        nextRow.id,
+        firstField.name,
+        nextRow.data[firstField.name]
+      );
+    }
+  };
+
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter") {
       e.preventDefault();
       handleCellSubmit();
+    } else if (e.key === "Tab") {
+      e.preventDefault();
+      handleCellSubmit();
+      setTimeout(() => moveToNextCell(), 0);
     } else if (e.key === "Escape") {
       e.preventDefault();
       handleCellCancel();
@@ -144,7 +190,8 @@ const DataGrid: React.FC<DataGridProps> = ({
       isValid: false,
     };
 
-    onDataChange([...data, newRow]);
+    setLocalData([...localData, newRow]);
+    setHasUnsavedChanges(true);
   };
 
   const handleDeleteRows = () => {
@@ -153,8 +200,9 @@ const DataGrid: React.FC<DataGridProps> = ({
       return;
     }
 
-    const updatedData = data.filter((row) => !selectedRows.has(row.id));
-    onDataChange(updatedData);
+    const updatedData = localData.filter((row) => !selectedRows.has(row.id));
+    setLocalData(updatedData);
+    setHasUnsavedChanges(true);
     setSelectedRows(new Set());
     setSelectAll(false);
     showToast(`Deleted ${selectedRows.size} row(s)`, "success");
@@ -168,7 +216,9 @@ const DataGrid: React.FC<DataGridProps> = ({
       newSelectedRows.add(rowId);
     }
     setSelectedRows(newSelectedRows);
-    setSelectAll(newSelectedRows.size === data.length && data.length > 0);
+    setSelectAll(
+      newSelectedRows.size === localData.length && localData.length > 0
+    );
   };
 
   const handleSelectAll = () => {
@@ -176,9 +226,23 @@ const DataGrid: React.FC<DataGridProps> = ({
       setSelectedRows(new Set());
       setSelectAll(false);
     } else {
-      setSelectedRows(new Set(data.map((row) => row.id)));
+      setSelectedRows(new Set(localData.map((row) => row.id)));
       setSelectAll(true);
     }
+  };
+
+  const handleSaveChanges = () => {
+    onDataChange(localData);
+    setHasUnsavedChanges(false);
+    showToast("Changes saved successfully", "success");
+  };
+
+  const handleDiscardChanges = () => {
+    setLocalData(data);
+    setHasUnsavedChanges(false);
+    setEditingCell(null);
+    setEditValue("");
+    showToast("Changes discarded", "info");
   };
 
   const renderCellContent = (row: TemplateData, field: TemplateField) => {
@@ -301,10 +365,33 @@ const DataGrid: React.FC<DataGridProps> = ({
           <h3 className="text-lg font-medium text-gray-900">
             Data Entry: {template.name}
           </h3>
-          <span className="text-sm text-gray-500">{data.length} row(s)</span>
+          <span className="text-sm text-gray-500">
+            {localData.length} row(s)
+          </span>
+          {hasUnsavedChanges && (
+            <span className="text-sm text-amber-600 font-medium">
+              • Unsaved changes
+            </span>
+          )}
         </div>
 
         <div className="flex items-center space-x-2">
+          {hasUnsavedChanges && (
+            <>
+              <button
+                onClick={handleDiscardChanges}
+                className="px-3 py-2 text-sm bg-gray-600 text-white rounded hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500"
+              >
+                Discard Changes
+              </button>
+              <button
+                onClick={handleSaveChanges}
+                className="px-4 py-2 text-sm bg-green-600 text-white rounded hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500"
+              >
+                Save Changes
+              </button>
+            </>
+          )}
           {selectedRows.size > 0 && (
             <button
               onClick={handleDeleteRows}
@@ -364,7 +451,7 @@ const DataGrid: React.FC<DataGridProps> = ({
             </thead>
 
             <tbody className="bg-white divide-y divide-gray-200">
-              {data.length === 0 ? (
+              {localData.length === 0 ? (
                 <tr>
                   <td
                     colSpan={sortedFields.length + 2}
@@ -389,7 +476,7 @@ const DataGrid: React.FC<DataGridProps> = ({
                   </td>
                 </tr>
               ) : (
-                data.map((row, rowIndex) => {
+                localData.map((row, rowIndex) => {
                   const status = getRowStatus(row);
                   return (
                     <tr
@@ -462,18 +549,28 @@ const DataGrid: React.FC<DataGridProps> = ({
       </div>
 
       {/* Summary */}
-      {data.length > 0 && (
+      {localData.length > 0 && (
         <div className="flex justify-between items-center text-sm text-gray-600 bg-gray-50 px-4 py-2 rounded">
-          <div>Total: {data.length} rows</div>
+          <div>Total: {localData.length} rows</div>
           <div className="flex items-center space-x-4">
             <div className="flex items-center space-x-1">
               <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-              <span>Valid: {data.filter((row) => row.isValid).length}</span>
+              <span>
+                Valid: {localData.filter((row) => row.isValid).length}
+              </span>
             </div>
             <div className="flex items-center space-x-1">
               <div className="w-3 h-3 bg-red-500 rounded-full"></div>
-              <span>Invalid: {data.filter((row) => !row.isValid).length}</span>
+              <span>
+                Invalid: {localData.filter((row) => !row.isValid).length}
+              </span>
             </div>
+            {hasUnsavedChanges && (
+              <div className="flex items-center space-x-1">
+                <div className="w-3 h-3 bg-amber-500 rounded-full"></div>
+                <span>Unsaved changes</span>
+              </div>
+            )}
           </div>
         </div>
       )}

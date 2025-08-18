@@ -46,6 +46,13 @@ export const ToastProvider: React.FC<ToastProviderProps> = ({ children }) => {
       const newToast: ToastMessage = { id, message, type, duration };
 
       setToasts((prev) => [...prev, newToast]);
+
+      // Auto-remove toast after duration
+      if (duration > 0) {
+        setTimeout(() => {
+          setToasts((prev) => prev.filter((toast) => toast.id !== id));
+        }, duration);
+      }
     },
     []
   );
@@ -58,7 +65,7 @@ export const ToastProvider: React.FC<ToastProviderProps> = ({ children }) => {
     <ToastContext.Provider value={{ showToast, removeToast }}>
       {children}
       {/* Toast Container */}
-      <div className="fixed top-0 right-0 z-50 p-4 space-y-2">
+      <div className="fixed top-4 right-4 z-50 space-y-3 max-w-sm">
         {toasts.map((toast) => (
           <Toast key={toast.id} toast={toast} onRemove={removeToast} />
         ))}
