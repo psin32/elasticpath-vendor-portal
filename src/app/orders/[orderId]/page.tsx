@@ -669,6 +669,158 @@ export default function OrderDetailsPage({ params }: OrderDetailsPageProps) {
                       </div>
                     </div>
                   </div>
+
+                  {/* Fulfillments Section */}
+                  <div className="mt-6">
+                    <div className="bg-white border border-gray-200 rounded-lg shadow-sm">
+                      <div className="px-6 py-4 border-b border-gray-200">
+                        <h2 className="text-lg font-medium text-gray-900">
+                          Order Fulfillments
+                        </h2>
+                      </div>
+                      <div className="p-6">
+                        {fulfillments.length === 0 ? (
+                          <div className="text-center py-8">
+                            <svg
+                              className="mx-auto h-12 w-12 text-gray-400"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
+                              />
+                            </svg>
+                            <h3 className="mt-2 text-sm font-medium text-gray-900">
+                              No fulfillments
+                            </h3>
+                            <p className="mt-1 text-sm text-gray-500">
+                              No items from this order have been fulfilled yet.
+                            </p>
+                          </div>
+                        ) : (
+                          <div className="space-y-4">
+                            {fulfillments.map((fulfillment) => (
+                              <div
+                                key={fulfillment.id}
+                                className="border border-gray-200 rounded-lg p-4"
+                              >
+                                <div className="flex justify-between items-start">
+                                  <div className="flex-1">
+                                    <div className="flex items-center space-x-3 mb-2">
+                                      <h4 className="text-sm font-medium text-gray-900">
+                                        Fulfillment #{fulfillment.id}
+                                      </h4>
+                                      <span
+                                        className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                                          fulfillment.status === "fulfilled"
+                                            ? "bg-green-100 text-green-800"
+                                            : fulfillment.status === "partial"
+                                            ? "bg-yellow-100 text-yellow-800"
+                                            : fulfillment.status === "pending"
+                                            ? "bg-blue-100 text-blue-800"
+                                            : "bg-gray-100 text-gray-800"
+                                        }`}
+                                      >
+                                        {fulfillment.status}
+                                      </span>
+                                    </div>
+
+                                    <div className="space-y-1 mb-3">
+                                      {fulfillment.tracking_reference && (
+                                        <p className="text-sm text-gray-600">
+                                          <span className="font-medium">
+                                            Tracking:
+                                          </span>{" "}
+                                          {fulfillment.tracking_reference}
+                                        </p>
+                                      )}
+                                      {fulfillment.shipping_method && (
+                                        <p className="text-sm text-gray-600">
+                                          <span className="font-medium">
+                                            Method:
+                                          </span>{" "}
+                                          {fulfillment.shipping_method}
+                                        </p>
+                                      )}
+                                      {fulfillment.notes && (
+                                        <p className="text-sm text-gray-600">
+                                          <span className="font-medium">
+                                            Notes:
+                                          </span>{" "}
+                                          {fulfillment.notes}
+                                        </p>
+                                      )}
+                                      <p className="text-xs text-gray-500">
+                                        Created:{" "}
+                                        {new Date(
+                                          fulfillment.created_at
+                                        ).toLocaleDateString()}
+                                      </p>
+                                    </div>
+
+                                    <div className="border-t border-gray-100 pt-3">
+                                      <h5 className="text-xs font-medium text-gray-700 mb-2">
+                                        Fulfilled Items (
+                                        {fulfillment.items.length} items,{" "}
+                                        {fulfillment.items.reduce(
+                                          (sum: number, item: any) =>
+                                            sum + item.quantity,
+                                          0
+                                        )}{" "}
+                                        units)
+                                      </h5>
+                                      <div className="space-y-1">
+                                        {fulfillment.items.map(
+                                          (item: any, index: number) => {
+                                            const orderItem = orderItems.find(
+                                              (oi) => oi.id === item.id
+                                            );
+                                            return (
+                                              <div
+                                                key={index}
+                                                className="flex justify-between text-xs text-gray-600"
+                                              >
+                                                <span>
+                                                  {orderItem?.name ||
+                                                    `Item ${item.id}`}
+                                                  {orderItem?.sku &&
+                                                    ` (${orderItem.sku})`}
+                                                </span>
+                                                <span>
+                                                  Qty: {item.quantity}
+                                                </span>
+                                              </div>
+                                            );
+                                          }
+                                        )}
+                                      </div>
+                                    </div>
+                                  </div>
+
+                                  <button
+                                    onClick={() => {
+                                      // You can implement packing slip generation here
+                                      generatePackingSlip(
+                                        orderId,
+                                        fulfillment.id
+                                      );
+                                    }}
+                                    className="ml-4 px-2 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                  >
+                                    Packing Slip
+                                  </button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
                 </div>
               )}
             </div>

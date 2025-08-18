@@ -10,6 +10,7 @@ import type {
   PcmProductAttachmentBody,
   PriceBookFilter,
 } from "@elasticpath/js-sdk";
+import { v4 as uuidv4 } from "uuid";
 
 /**
  * Enhanced hook for EPCC API interactions with error handling and loading states
@@ -318,6 +319,7 @@ export const useEpccApi = (orgId?: string, storeId?: string) => {
         // First fetch the order to get the actual item quantities
         const orderResponse = await client.Orders.With(["items"]).Get(orderId);
         const orderItems = orderResponse.included?.items || [];
+        const fulfillmentGroupId = uuidv4();
 
         // Create fulfillment records for each item in the custom API
         const fulfillmentPromises = fulfillmentData.items.map(async (item) => {
@@ -340,6 +342,7 @@ export const useEpccApi = (orgId?: string, storeId?: string) => {
             tracking_reference: fulfillmentData.tracking_reference || null,
             shipping_carrier: fulfillmentData.shipping_method || null,
             notes: fulfillmentData.notes || null,
+            fulfillment_group_id: fulfillmentGroupId,
           };
 
           return await client.request.send(
@@ -380,15 +383,14 @@ export const useEpccApi = (orgId?: string, storeId?: string) => {
         );
 
         // Transform the data to group by tracking reference and aggregate items
-        const fulfillments: any[] = [];
         const fulfillmentMap = new Map();
 
         response.data.forEach((entry: any) => {
-          const trackingRef = entry.tracking_reference || "no-tracking";
+          const fulfillmentGroupId = entry.fulfillment_group_id;
 
-          if (!fulfillmentMap.has(trackingRef)) {
-            fulfillmentMap.set(trackingRef, {
-              id: `fulfillment-${trackingRef}-${Date.now()}`,
+          if (!fulfillmentMap.has(fulfillmentGroupId)) {
+            fulfillmentMap.set(fulfillmentGroupId, {
+              id: `fulfillment-${fulfillmentGroupId}`,
               items: [],
               tracking_reference: entry.tracking_reference,
               shipping_method: entry.shipping_carrier,
@@ -399,7 +401,7 @@ export const useEpccApi = (orgId?: string, storeId?: string) => {
             });
           }
 
-          const fulfillment = fulfillmentMap.get(trackingRef);
+          const fulfillment = fulfillmentMap.get(fulfillmentGroupId);
           fulfillment.items.push({
             id: entry.order_item_id,
             quantity: entry.fulfilled_quantity,
@@ -439,10 +441,9 @@ export const useEpccApi = (orgId?: string, storeId?: string) => {
           "v2"
         );
 
-        // Find entries that match the tracking reference pattern from fulfillmentId
+        // Find entries that match the fulfillment group ID
         const entriesToUpdate = response.data.filter((entry: any) => {
-          const trackingRef = entry.tracking_reference || "no-tracking";
-          return fulfillmentId.includes(trackingRef);
+          return entry.fulfillment_group_id === fulfillmentId;
         });
 
         // Update each entry
@@ -724,6 +725,28 @@ export const useEpccApi = (orgId?: string, storeId?: string) => {
           },
           presentation: {
             sort_order: 650,
+          },
+        },
+        {
+          type: "custom_field",
+          name: "Fulfillment Group ID",
+          slug: "fulfillment_group_id",
+          field_type: "string",
+          description: "Fulfillment Group ID",
+          use_as_url_slug: false,
+          validation: {
+            string: {
+              allow_null_values: false,
+              immutable: true,
+              min_length: null,
+              max_length: null,
+              regex: null,
+              unique: "no",
+              unique_case_insensitivity: false,
+            },
+          },
+          presentation: {
+            sort_order: 600,
           },
         },
       ];
