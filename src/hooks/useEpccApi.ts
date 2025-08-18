@@ -390,7 +390,7 @@ export const useEpccApi = (orgId?: string, storeId?: string) => {
 
           if (!fulfillmentMap.has(fulfillmentGroupId)) {
             fulfillmentMap.set(fulfillmentGroupId, {
-              id: `fulfillment-${fulfillmentGroupId}`,
+              id: fulfillmentGroupId,
               items: [],
               tracking_reference: entry.tracking_reference,
               shipping_method: entry.shipping_carrier,
