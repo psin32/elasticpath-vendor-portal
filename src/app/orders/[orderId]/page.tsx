@@ -10,6 +10,10 @@ import { useDashboard } from "../../../hooks/useDashboard";
 import { Order, OrderItem } from "@elasticpath/js-sdk";
 import { OrderItemPromotions } from "../../../components/orders/OrderItemPromotions";
 import FulfillmentOverlay from "../../../components/orders/FulfillmentOverlay";
+import {
+  generatePackingSlip,
+  type PackingSlipData,
+} from "../../../utils/packingSlipGenerator";
 
 interface OrderDetailsPageProps {
   params: {
@@ -92,7 +96,6 @@ export default function OrderDetailsPage({ params }: OrderDetailsPageProps) {
     fetchShippingGroups,
     createFulfillment,
     fetchFulfillments,
-    generatePackingSlip,
     checkOrderFulfillmentAPI,
     createOrderFulfillmentAPI,
   } = useEpccApi(selectedOrgId || undefined, selectedStoreId || undefined);
@@ -196,6 +199,38 @@ export default function OrderDetailsPage({ params }: OrderDetailsPageProps) {
       default:
         return "bg-gray-100 text-gray-800";
     }
+  };
+
+  const handleGeneratePackingSlip = (fulfillment: any) => {
+    if (!order) return;
+
+    const packingSlipData: PackingSlipData = {
+      order: {
+        id: order.id,
+        status: order.status,
+        payment: order.payment,
+        meta: order.meta,
+      },
+      fulfillment: {
+        id: fulfillment.id,
+        tracking_reference: fulfillment.tracking_reference,
+        shipping_method: fulfillment.shipping_method,
+        notes: fulfillment.notes,
+        created_at: fulfillment.created_at,
+        items: fulfillment.items,
+      },
+      orderItems: orderItems,
+      companyInfo: {
+        name: "Your Company Name",
+        address: "123 Business St, City, State 12345",
+        phone: "+1 (555) 123-4567",
+        email: "contact@yourcompany.com",
+      },
+      shippingAddress: order.shipping_address,
+    };
+    console.log("packingSlipData", packingSlipData);
+
+    generatePackingSlip(packingSlipData);
   };
 
   if (loading) {
@@ -926,10 +961,7 @@ export default function OrderDetailsPage({ params }: OrderDetailsPageProps) {
                                   <div className="flex items-center space-x-2">
                                     <button
                                       onClick={() => {
-                                        generatePackingSlip(
-                                          orderId,
-                                          fulfillment.id
-                                        );
+                                        handleGeneratePackingSlip(fulfillment);
                                       }}
                                       className="inline-flex items-center px-3 py-1.5 bg-blue-600 text-white text-xs font-medium rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200"
                                     >
@@ -1154,7 +1186,6 @@ export default function OrderDetailsPage({ params }: OrderDetailsPageProps) {
           }
           return result;
         }}
-        onGeneratePackingSlip={generatePackingSlip}
         onCheckOrderFulfillmentAPI={checkOrderFulfillmentAPI}
         onCreateOrderFulfillmentAPI={createOrderFulfillmentAPI}
       />

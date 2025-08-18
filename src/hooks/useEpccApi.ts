@@ -487,26 +487,6 @@ export const useEpccApi = (orgId?: string, storeId?: string) => {
   );
 
   /**
-   * Generate packing slip for fulfillment
-   */
-  const generatePackingSlip = useCallback(
-    async (orderId: string, fulfillmentId: string) => {
-      return apiCall(async (client) => {
-        return await client.request.send(
-          `orders/${orderId}/fulfillments/${fulfillmentId}/packing-slip`,
-          "GET",
-          undefined,
-          undefined,
-          client,
-          undefined,
-          "v2"
-        );
-      }, "Failed to generate packing slip");
-    },
-    [apiCall]
-  );
-
-  /**
    * Check if order_fulfillment custom API exists
    */
   const checkOrderFulfillmentAPI = useCallback(async (): Promise<{
@@ -1152,7 +1132,6 @@ export const useEpccApi = (orgId?: string, storeId?: string) => {
     createFulfillment,
     fetchFulfillments,
     updateFulfillment,
-    generatePackingSlip,
     checkOrderFulfillmentAPI,
     createOrderFulfillmentAPI,
 

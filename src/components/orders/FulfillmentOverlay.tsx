@@ -46,10 +46,6 @@ interface FulfillmentOverlayProps {
       notes?: string;
     }
   ) => Promise<any>;
-  onGeneratePackingSlip: (
-    orderId: string,
-    fulfillmentId: string
-  ) => Promise<any>;
   onCheckOrderFulfillmentAPI: () => Promise<{
     exists: boolean;
     data?: any;
@@ -65,7 +61,6 @@ const FulfillmentOverlay: React.FC<FulfillmentOverlayProps> = ({
   orderItems,
   existingFulfillments,
   onCreateFulfillment,
-  onGeneratePackingSlip,
   onCheckOrderFulfillmentAPI,
   onCreateOrderFulfillmentAPI,
 }) => {
@@ -76,7 +71,7 @@ const FulfillmentOverlay: React.FC<FulfillmentOverlayProps> = ({
   const [shippingMethod, setShippingMethod] = useState("");
   const [notes, setNotes] = useState("");
   const [loading, setLoading] = useState(false);
-  const [generatingSlip, setGeneratingSlip] = useState<string | null>(null);
+
   const [apiExists, setApiExists] = useState<boolean | null>(null);
   const [checkingAPI, setCheckingAPI] = useState(false);
   const [settingUpAPI, setSettingUpAPI] = useState(false);
@@ -228,31 +223,6 @@ const FulfillmentOverlay: React.FC<FulfillmentOverlayProps> = ({
       showToast("Failed to create fulfillment", "error");
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleGeneratePackingSlip = async (fulfillmentId: string) => {
-    try {
-      setGeneratingSlip(fulfillmentId);
-      const response = await onGeneratePackingSlip(orderId, fulfillmentId);
-
-      // If the response contains a PDF URL or blob, open it
-      if (response?.data?.url) {
-        window.open(response.data.url, "_blank");
-      } else if (response?.data) {
-        // Create blob URL for PDF data
-        const blob = new Blob([response.data], { type: "application/pdf" });
-        const url = window.URL.createObjectURL(blob);
-        window.open(url, "_blank");
-        window.URL.revokeObjectURL(url);
-      }
-
-      showToast("Packing slip generated successfully", "success");
-    } catch (error) {
-      console.error("Error generating packing slip:", error);
-      showToast("Failed to generate packing slip", "error");
-    } finally {
-      setGeneratingSlip(null);
     }
   };
 
@@ -553,56 +523,6 @@ const FulfillmentOverlay: React.FC<FulfillmentOverlayProps> = ({
                     placeholder="Additional notes for this fulfillment"
                   />
                 </div>
-              </div>
-            </div>
-          )}
-
-          {/* Existing Fulfillments */}
-          {apiExists && existingFulfillments.length > 0 && (
-            <div className="bg-white px-6 py-4 border-t border-gray-200">
-              <h4 className="text-sm font-medium text-gray-900 mb-3">
-                Existing Fulfillments
-              </h4>
-              <div className="space-y-2 max-h-32 overflow-y-auto">
-                {existingFulfillments.map((fulfillment) => (
-                  <div
-                    key={fulfillment.id}
-                    className="flex items-center justify-between p-2 bg-gray-50 rounded"
-                  >
-                    <div className="flex-1">
-                      <div className="flex items-center space-x-2">
-                        <span className="text-sm font-medium text-gray-900">
-                          {fulfillment.items.length} items
-                        </span>
-                        <span className="text-xs text-gray-500">
-                          (
-                          {fulfillment.items.reduce(
-                            (sum, item) => sum + item.quantity,
-                            0
-                          )}{" "}
-                          units)
-                        </span>
-                        {fulfillment.tracking_reference && (
-                          <span className="text-xs text-gray-500">
-                            • {fulfillment.tracking_reference}
-                          </span>
-                        )}
-                      </div>
-                      <div className="text-xs text-gray-500">
-                        {new Date(fulfillment.created_at).toLocaleDateString()}
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => handleGeneratePackingSlip(fulfillment.id)}
-                      disabled={generatingSlip === fulfillment.id}
-                      className="px-2 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
-                    >
-                      {generatingSlip === fulfillment.id
-                        ? "Generating..."
-                        : "Packing Slip"}
-                    </button>
-                  </div>
-                ))}
               </div>
             </div>
           )}
