@@ -32,7 +32,7 @@ export default function OrdersPage() {
   const [ordersLoading, setOrdersLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
-  const [currentPage, setCurrentPage] = useState(1);
+  const [currentPage, setCurrentPage] = useState(0);
   const [paginationInfo, setPaginationInfo] = useState<PaginationInfo>({
     current_page: 1,
     total_pages: 1,
@@ -382,7 +382,7 @@ export default function OrdersPage() {
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap">
                               <div className="text-sm text-gray-900">
-                                {order.contact?.email || "N/A"}
+                                {order.contact?.email || order.customer?.email}
                               </div>
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap">
