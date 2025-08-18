@@ -9,6 +9,7 @@ import { SidebarNavigation } from "../../../components/layout/SidebarNavigation"
 import { useDashboard } from "../../../hooks/useDashboard";
 import { Order, OrderItem } from "@elasticpath/js-sdk";
 import { OrderItemPromotions } from "../../../components/orders/OrderItemPromotions";
+import FulfillmentOverlay from "../../../components/orders/FulfillmentOverlay";
 
 interface OrderDetailsPageProps {
   params: {
@@ -34,8 +35,10 @@ export default function OrderDetailsPage({ params }: OrderDetailsPageProps) {
   const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
   const [promotions, setPromotions] = useState<any[]>([]);
   const [shippingGroups, setShippingGroups] = useState<any[]>([]);
+  const [fulfillments, setFulfillments] = useState<any[]>([]);
   const [orderLoading, setOrderLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showFulfillmentOverlay, setShowFulfillmentOverlay] = useState(false);
 
   // Group items by shipping group
   const itemsByShippingGroup = useMemo(() => {
@@ -63,10 +66,13 @@ export default function OrderDetailsPage({ params }: OrderDetailsPageProps) {
     setStoreSearchTerm,
   } = useDashboard();
 
-  const { fetchOrder, fetchShippingGroups } = useEpccApi(
-    selectedOrgId || undefined,
-    selectedStoreId || undefined
-  );
+  const {
+    fetchOrder,
+    fetchShippingGroups,
+    createFulfillment,
+    fetchFulfillments,
+    generatePackingSlip,
+  } = useEpccApi(selectedOrgId || undefined, selectedStoreId || undefined);
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -114,6 +120,15 @@ export default function OrderDetailsPage({ params }: OrderDetailsPageProps) {
         } catch (err) {
           console.warn("Failed to fetch shipping groups:", err);
           setShippingGroups([]);
+        }
+
+        // Fetch fulfillments
+        try {
+          const fulfillmentsData = await fetchFulfillments(orderId);
+          setFulfillments(fulfillmentsData.data || []);
+        } catch (err) {
+          console.warn("Failed to fetch fulfillments:", err);
+          setFulfillments([]);
         }
       }
     } catch (err) {
@@ -337,7 +352,13 @@ export default function OrderDetailsPage({ params }: OrderDetailsPageProps) {
                           {formatDate(order.meta.timestamps.created_at)}
                         </p>
                       </div>
-                      <div className="flex space-x-3">
+                      <div className="flex items-center space-x-3">
+                        <button
+                          onClick={() => setShowFulfillmentOverlay(true)}
+                          className="px-4 py-2 bg-indigo-600 text-white text-sm rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                        >
+                          Create Fulfillment
+                        </button>
                         <span
                           className={`inline-flex px-3 py-1 text-sm font-semibold rounded-full ${getStatusColor(
                             order.status
@@ -652,6 +673,27 @@ export default function OrderDetailsPage({ params }: OrderDetailsPageProps) {
           </div>
         </main>
       </div>
+
+      {/* Fulfillment Overlay */}
+      <FulfillmentOverlay
+        isOpen={showFulfillmentOverlay}
+        onClose={() => setShowFulfillmentOverlay(false)}
+        orderId={orderId}
+        orderItems={orderItems}
+        existingFulfillments={fulfillments}
+        onCreateFulfillment={async (orderId, fulfillmentData) => {
+          const result = await createFulfillment(orderId, fulfillmentData);
+          // Refresh fulfillments after creation
+          try {
+            const fulfillmentsData = await fetchFulfillments(orderId);
+            setFulfillments(fulfillmentsData.data || []);
+          } catch (err) {
+            console.warn("Failed to refresh fulfillments:", err);
+          }
+          return result;
+        }}
+        onGeneratePackingSlip={generatePackingSlip}
+      />
     </div>
   );
 }

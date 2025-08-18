@@ -71,7 +71,7 @@ export const SidebarNavigation: React.FC<SidebarNavigationProps> = ({
     {
       id: "bulk-upload" as const,
       label: "Bulk Upload",
-      enabled: false,
+      enabled: true,
       icon: (
         <svg
           className="mr-3 h-5 w-5"
@@ -91,7 +91,7 @@ export const SidebarNavigation: React.FC<SidebarNavigationProps> = ({
     {
       id: "templates" as const,
       label: "Templates",
-      enabled: false,
+      enabled: true,
       icon: (
         <svg
           className="mr-3 h-5 w-5"

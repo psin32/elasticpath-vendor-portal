@@ -298,6 +298,116 @@ export const useEpccApi = (orgId?: string, storeId?: string) => {
   );
 
   /**
+   * Create fulfillment for specific items
+   */
+  const createFulfillment = useCallback(
+    async (
+      orderId: string,
+      fulfillmentData: {
+        items: Array<{
+          id: string;
+          quantity: number;
+        }>;
+        tracking_reference?: string;
+        shipping_method?: string;
+        notes?: string;
+      }
+    ) => {
+      return apiCall(async (client) => {
+        return await client.request.send(
+          `orders/${orderId}/fulfillments`,
+          "POST",
+          {
+            data: {
+              type: "fulfillment",
+              ...fulfillmentData,
+            },
+          },
+          undefined,
+          client,
+          undefined,
+          "v2"
+        );
+      }, "Failed to create fulfillment");
+    },
+    [apiCall]
+  );
+
+  /**
+   * Fetch fulfillments for an order
+   */
+  const fetchFulfillments = useCallback(
+    async (orderId: string) => {
+      return apiCall(async (client) => {
+        return await client.request.send(
+          `orders/${orderId}/fulfillments`,
+          "GET",
+          undefined,
+          undefined,
+          client,
+          undefined,
+          "v2"
+        );
+      }, "Failed to fetch fulfillments");
+    },
+    [apiCall]
+  );
+
+  /**
+   * Update fulfillment
+   */
+  const updateFulfillment = useCallback(
+    async (
+      orderId: string,
+      fulfillmentId: string,
+      fulfillmentData: {
+        tracking_reference?: string;
+        shipping_method?: string;
+        notes?: string;
+      }
+    ) => {
+      return apiCall(async (client) => {
+        return await client.request.send(
+          `orders/${orderId}/fulfillments/${fulfillmentId}`,
+          "PUT",
+          {
+            data: {
+              type: "fulfillment",
+              id: fulfillmentId,
+              ...fulfillmentData,
+            },
+          },
+          undefined,
+          client,
+          undefined,
+          "v2"
+        );
+      }, "Failed to update fulfillment");
+    },
+    [apiCall]
+  );
+
+  /**
+   * Generate packing slip for fulfillment
+   */
+  const generatePackingSlip = useCallback(
+    async (orderId: string, fulfillmentId: string) => {
+      return apiCall(async (client) => {
+        return await client.request.send(
+          `orders/${orderId}/fulfillments/${fulfillmentId}/packing-slip`,
+          "GET",
+          undefined,
+          undefined,
+          client,
+          undefined,
+          "v2"
+        );
+      }, "Failed to generate packing slip");
+    },
+    [apiCall]
+  );
+
+  /**
    * Fetch catalogs
    */
   const fetchCatalogs = useCallback(async () => {
@@ -679,6 +789,12 @@ export const useEpccApi = (orgId?: string, storeId?: string) => {
     fetchProductNodes,
     attachProductToNode,
     detachProductFromNode,
+
+    // Fulfillment methods
+    createFulfillment,
+    fetchFulfillments,
+    updateFulfillment,
+    generatePackingSlip,
 
     // Utility methods
     clearApiError: () => setApiError(null),
