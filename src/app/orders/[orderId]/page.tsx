@@ -72,6 +72,8 @@ export default function OrderDetailsPage({ params }: OrderDetailsPageProps) {
     createFulfillment,
     fetchFulfillments,
     generatePackingSlip,
+    checkOrderFulfillmentAPI,
+    createOrderFulfillmentAPI,
   } = useEpccApi(selectedOrgId || undefined, selectedStoreId || undefined);
 
   // Redirect if not authenticated
@@ -125,7 +127,7 @@ export default function OrderDetailsPage({ params }: OrderDetailsPageProps) {
         // Fetch fulfillments
         try {
           const fulfillmentsData = await fetchFulfillments(orderId);
-          setFulfillments(fulfillmentsData.data || []);
+          setFulfillments(fulfillmentsData?.data || []);
         } catch (err) {
           console.warn("Failed to fetch fulfillments:", err);
           setFulfillments([]);
@@ -686,13 +688,15 @@ export default function OrderDetailsPage({ params }: OrderDetailsPageProps) {
           // Refresh fulfillments after creation
           try {
             const fulfillmentsData = await fetchFulfillments(orderId);
-            setFulfillments(fulfillmentsData.data || []);
+            setFulfillments(fulfillmentsData?.data || []);
           } catch (err) {
             console.warn("Failed to refresh fulfillments:", err);
           }
           return result;
         }}
         onGeneratePackingSlip={generatePackingSlip}
+        onCheckOrderFulfillmentAPI={checkOrderFulfillmentAPI}
+        onCreateOrderFulfillmentAPI={createOrderFulfillmentAPI}
       />
     </div>
   );

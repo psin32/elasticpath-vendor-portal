@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useEpccClientWithState } from "./useEpccClient";
 import { useAuth } from "../contexts/AuthContext";
 import type {
+  CustomApiBase,
   ElasticPath,
   FileBase,
   PcmProductAttachmentBody,
@@ -298,7 +299,7 @@ export const useEpccApi = (orgId?: string, storeId?: string) => {
   );
 
   /**
-   * Create fulfillment for specific items
+   * Create fulfillment for specific items using custom API
    */
   const createFulfillment = useCallback(
     async (
@@ -314,47 +315,107 @@ export const useEpccApi = (orgId?: string, storeId?: string) => {
       }
     ) => {
       return apiCall(async (client) => {
-        return await client.request.send(
-          `orders/${orderId}/fulfillments`,
-          "POST",
-          {
-            data: {
-              type: "fulfillment",
-              ...fulfillmentData,
+        // First fetch the order to get the actual item quantities
+        const orderResponse = await client.Orders.With(["items"]).Get(orderId);
+        const orderItems = orderResponse.included?.items || [];
+
+        // Create fulfillment records for each item in the custom API
+        const fulfillmentPromises = fulfillmentData.items.map(async (item) => {
+          // Find the original order item to get the total quantity
+          const originalItem = orderItems.find(
+            (orderItem: any) => orderItem.id === item.id
+          );
+          const totalQuantity = originalItem?.quantity || item.quantity;
+
+          // Calculate remaining quantity (this is a simplified calculation)
+          const remainingQuantity = Math.max(0, totalQuantity - item.quantity);
+
+          const customApiData = {
+            type: "order_fulfillment_ext",
+            order_id: orderId,
+            order_item_id: item.id,
+            total_quantity: totalQuantity,
+            fulfilled_quantity: item.quantity,
+            remaining_quantity: remainingQuantity,
+            tracking_reference: fulfillmentData.tracking_reference || null,
+            shipping_carrier: fulfillmentData.shipping_method || null,
+            notes: fulfillmentData.notes || null,
+          };
+
+          return await client.request.send(
+            `extensions/order_fulfillments`,
+            "POST",
+            {
+              data: customApiData,
             },
-          },
-          undefined,
-          client,
-          undefined,
-          "v2"
-        );
+            undefined,
+            client,
+            false,
+            "v2"
+          );
+        });
+
+        const results = await Promise.all(fulfillmentPromises);
+        return { data: results };
       }, "Failed to create fulfillment");
     },
     [apiCall]
   );
 
   /**
-   * Fetch fulfillments for an order
+   * Fetch fulfillments for an order from custom API
    */
   const fetchFulfillments = useCallback(
     async (orderId: string) => {
       return apiCall(async (client) => {
-        return await client.request.send(
-          `orders/${orderId}/fulfillments`,
+        // Fetch fulfillment records from custom API filtered by order_id
+        const response = await client.request.send(
+          `extensions/order_fulfillments?filter=eq(order_id,${orderId})`,
           "GET",
           undefined,
           undefined,
           client,
-          undefined,
+          false,
           "v2"
         );
+
+        // Transform the data to group by tracking reference and aggregate items
+        const fulfillments: any[] = [];
+        const fulfillmentMap = new Map();
+
+        response.data.forEach((entry: any) => {
+          const trackingRef = entry.tracking_reference || "no-tracking";
+
+          if (!fulfillmentMap.has(trackingRef)) {
+            fulfillmentMap.set(trackingRef, {
+              id: `fulfillment-${trackingRef}-${Date.now()}`,
+              items: [],
+              tracking_reference: entry.tracking_reference,
+              shipping_method: entry.shipping_carrier,
+              notes: entry.notes,
+              status: entry.fulfilled_quantity > 0 ? "fulfilled" : "pending",
+              created_at:
+                entry.meta?.timestamps?.created_at || new Date().toISOString(),
+            });
+          }
+
+          const fulfillment = fulfillmentMap.get(trackingRef);
+          fulfillment.items.push({
+            id: entry.order_item_id,
+            quantity: entry.fulfilled_quantity,
+          });
+        });
+
+        return {
+          data: Array.from(fulfillmentMap.values()),
+        };
       }, "Failed to fetch fulfillments");
     },
     [apiCall]
   );
 
   /**
-   * Update fulfillment
+   * Update fulfillment in custom API
    */
   const updateFulfillment = useCallback(
     async (
@@ -367,21 +428,58 @@ export const useEpccApi = (orgId?: string, storeId?: string) => {
       }
     ) => {
       return apiCall(async (client) => {
-        return await client.request.send(
-          `orders/${orderId}/fulfillments/${fulfillmentId}`,
-          "PUT",
-          {
-            data: {
-              type: "fulfillment",
-              id: fulfillmentId,
-              ...fulfillmentData,
-            },
-          },
+        // First, get all fulfillment entries for this order with the same tracking reference
+        const response = await client.request.send(
+          `custom-apis/order_fulfillments/entries?filter[eq][order_id]=${orderId}`,
+          "GET",
+          undefined,
           undefined,
           client,
           undefined,
           "v2"
         );
+
+        // Find entries that match the tracking reference pattern from fulfillmentId
+        const entriesToUpdate = response.data.filter((entry: any) => {
+          const trackingRef = entry.tracking_reference || "no-tracking";
+          return fulfillmentId.includes(trackingRef);
+        });
+
+        // Update each entry
+        const updatePromises = entriesToUpdate.map((entry: any) => {
+          const updateData = {
+            type: "custom_api_entry",
+            id: entry.id,
+            ...entry, // Keep existing data
+            tracking_reference:
+              fulfillmentData.tracking_reference !== undefined
+                ? fulfillmentData.tracking_reference
+                : entry.tracking_reference,
+            shipping_carrier:
+              fulfillmentData.shipping_method !== undefined
+                ? fulfillmentData.shipping_method
+                : entry.shipping_carrier,
+            notes:
+              fulfillmentData.notes !== undefined
+                ? fulfillmentData.notes
+                : entry.notes,
+          };
+
+          return client.request.send(
+            `custom-apis/order_fulfillments/entries/${entry.id}`,
+            "PUT",
+            {
+              data: updateData,
+            },
+            undefined,
+            client,
+            undefined,
+            "v2"
+          );
+        });
+
+        const results = await Promise.all(updatePromises);
+        return { data: results };
       }, "Failed to update fulfillment");
     },
     [apiCall]
@@ -406,6 +504,243 @@ export const useEpccApi = (orgId?: string, storeId?: string) => {
     },
     [apiCall]
   );
+
+  /**
+   * Check if order_fulfillment custom API exists
+   */
+  const checkOrderFulfillmentAPI = useCallback(async (): Promise<{
+    exists: boolean;
+    data?: any;
+    error?: any;
+  }> => {
+    try {
+      const result = await apiCall(async (client) => {
+        try {
+          const response = await client.CustomApis.Filter({
+            eq: {
+              slug: "order_fulfillments",
+            },
+          }).All();
+          if (response.data.length > 0) {
+            return { exists: true, data: response.data[0] };
+          }
+          return { exists: false, error: null };
+        } catch (error: any) {
+          // If we get a 404, the flow doesn't exist
+          if (error.status === 404 || error.response?.status === 404) {
+            return { exists: false, error: null };
+          }
+          // For other errors, rethrow
+          throw error;
+        }
+      }, "Failed to check order fulfillment API");
+
+      return result || { exists: false, error: "Unknown error" };
+    } catch (error) {
+      return { exists: false, error };
+    }
+  }, [apiCall]);
+
+  /**
+   * Create order_fulfillment custom API with fields
+   */
+  const createOrderFulfillmentAPI = useCallback(async () => {
+    return apiCall(async (client) => {
+      const request: CustomApiBase = {
+        name: "Order Fulfillments",
+        description: "Custom API for order fulfillment management",
+        slug: "order_fulfillments",
+        api_type: "order_fulfillment_ext",
+        type: "custom_api",
+        allow_upserts: false,
+      };
+      const flowResponse = await client.CustomApis.Create(request);
+      const flowId = flowResponse.data.id;
+
+      // Create custom fields for the flow
+      const fields = [
+        {
+          type: "custom_field",
+          name: "Order ID",
+          slug: "order_id",
+          field_type: "string",
+          description: "Order ID",
+          use_as_url_slug: false,
+          validation: {
+            string: {
+              allow_null_values: false,
+              immutable: true,
+              min_length: null,
+              max_length: null,
+              regex: null,
+              unique: "no",
+              unique_case_insensitivity: false,
+            },
+          },
+          presentation: {
+            sort_order: 1000,
+          },
+        },
+        {
+          type: "custom_field",
+          name: "Order Item ID",
+          slug: "order_item_id",
+          field_type: "string",
+          description: "Order Item ID",
+          use_as_url_slug: false,
+          validation: {
+            string: {
+              allow_null_values: false,
+              immutable: true,
+              min_length: null,
+              max_length: null,
+              regex: null,
+              unique: "no",
+              unique_case_insensitivity: false,
+            },
+          },
+          presentation: {
+            sort_order: 950,
+          },
+        },
+        {
+          type: "custom_field",
+          name: "Total Quantity",
+          slug: "total_quantity",
+          field_type: "integer",
+          description: "Total Quantity",
+          use_as_url_slug: false,
+          validation: {
+            integer: {
+              allow_null_values: true,
+              immutable: false,
+              min_value: null,
+              max_value: null,
+            },
+          },
+          presentation: {
+            sort_order: 900,
+          },
+        },
+        {
+          type: "custom_field",
+          name: "Fulfilled Quantity",
+          slug: "fulfilled_quantity",
+          field_type: "integer",
+          description: "Fulfilled Quantity",
+          use_as_url_slug: false,
+          validation: {
+            integer: {
+              allow_null_values: true,
+              immutable: false,
+              min_value: null,
+              max_value: null,
+            },
+          },
+          presentation: {
+            sort_order: 850,
+          },
+        },
+        {
+          type: "custom_field",
+          name: "Remaining Quantity",
+          slug: "remaining_quantity",
+          field_type: "integer",
+          description: "Remaining Quantity",
+          use_as_url_slug: false,
+          validation: {
+            integer: {
+              allow_null_values: true,
+              immutable: false,
+              min_value: null,
+              max_value: null,
+            },
+          },
+          presentation: {
+            sort_order: 800,
+          },
+        },
+        {
+          type: "custom_field",
+          name: "Tracking Reference",
+          slug: "tracking_reference",
+          field_type: "string",
+          description: "Tracking Reference",
+          use_as_url_slug: false,
+          validation: {
+            string: {
+              allow_null_values: true,
+              immutable: false,
+              min_length: null,
+              max_length: null,
+              regex: null,
+              unique: "no",
+              unique_case_insensitivity: false,
+            },
+          },
+          presentation: {
+            sort_order: 750,
+          },
+        },
+        {
+          type: "custom_field",
+          name: "Shipping Carrier",
+          slug: "shipping_carrier",
+          field_type: "string",
+          description: "Shipping Carrier",
+          use_as_url_slug: false,
+          validation: {
+            string: {
+              allow_null_values: true,
+              immutable: false,
+              min_length: null,
+              max_length: null,
+              regex: null,
+              unique: "no",
+              unique_case_insensitivity: false,
+            },
+          },
+          presentation: {
+            sort_order: 700,
+          },
+        },
+        {
+          type: "custom_field",
+          name: "Notes",
+          slug: "notes",
+          field_type: "string",
+          description: "Notes",
+          use_as_url_slug: false,
+          validation: {
+            string: {
+              allow_null_values: true,
+              immutable: false,
+              min_length: null,
+              max_length: null,
+              regex: null,
+              unique: "no",
+              unique_case_insensitivity: false,
+            },
+          },
+          presentation: {
+            sort_order: 650,
+          },
+        },
+      ];
+
+      // Create each field
+      const fieldPromises = fields.map((field) =>
+        client.CustomApis.CreateField(flowId, field)
+      );
+
+      const fieldResponses = await Promise.all(fieldPromises);
+
+      return {
+        flow: flowResponse,
+        fields: fieldResponses,
+      };
+    }, "Failed to create order fulfillment API");
+  }, [apiCall]);
 
   /**
    * Fetch catalogs
@@ -795,6 +1130,8 @@ export const useEpccApi = (orgId?: string, storeId?: string) => {
     fetchFulfillments,
     updateFulfillment,
     generatePackingSlip,
+    checkOrderFulfillmentAPI,
+    createOrderFulfillmentAPI,
 
     // Utility methods
     clearApiError: () => setApiError(null),

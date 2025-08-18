@@ -50,6 +50,12 @@ interface FulfillmentOverlayProps {
     orderId: string,
     fulfillmentId: string
   ) => Promise<any>;
+  onCheckOrderFulfillmentAPI: () => Promise<{
+    exists: boolean;
+    data?: any;
+    error?: any;
+  }>;
+  onCreateOrderFulfillmentAPI: () => Promise<any>;
 }
 
 const FulfillmentOverlay: React.FC<FulfillmentOverlayProps> = ({
@@ -60,6 +66,8 @@ const FulfillmentOverlay: React.FC<FulfillmentOverlayProps> = ({
   existingFulfillments,
   onCreateFulfillment,
   onGeneratePackingSlip,
+  onCheckOrderFulfillmentAPI,
+  onCreateOrderFulfillmentAPI,
 }) => {
   const [fulfillmentItems, setFulfillmentItems] = useState<FulfillmentItem[]>(
     []
@@ -69,6 +77,9 @@ const FulfillmentOverlay: React.FC<FulfillmentOverlayProps> = ({
   const [notes, setNotes] = useState("");
   const [loading, setLoading] = useState(false);
   const [generatingSlip, setGeneratingSlip] = useState<string | null>(null);
+  const [apiExists, setApiExists] = useState<boolean | null>(null);
+  const [checkingAPI, setCheckingAPI] = useState(false);
+  const [settingUpAPI, setSettingUpAPI] = useState(false);
 
   const { showToast } = useToast();
 
@@ -84,6 +95,13 @@ const FulfillmentOverlay: React.FC<FulfillmentOverlayProps> = ({
 
     return quantities;
   }, [existingFulfillments]);
+
+  // Check API when overlay opens
+  useEffect(() => {
+    if (isOpen) {
+      checkAPI();
+    }
+  }, [isOpen]);
 
   // Initialize fulfillment items when overlay opens
   useEffect(() => {
@@ -108,6 +126,34 @@ const FulfillmentOverlay: React.FC<FulfillmentOverlayProps> = ({
       setFulfillmentItems(items.filter((item) => item.availableQuantity > 0));
     }
   }, [isOpen, orderItems, fulfilledQuantities]);
+
+  const checkAPI = async () => {
+    setCheckingAPI(true);
+    try {
+      const result = await onCheckOrderFulfillmentAPI();
+      setApiExists(result.exists);
+    } catch (error) {
+      console.error("Error checking fulfillment API:", error);
+      setApiExists(false);
+      showToast("Failed to check fulfillment API status", "error");
+    } finally {
+      setCheckingAPI(false);
+    }
+  };
+
+  const handleSetupAPI = async () => {
+    setSettingUpAPI(true);
+    try {
+      await onCreateOrderFulfillmentAPI();
+      setApiExists(true);
+      showToast("Order fulfillment API created successfully!", "success");
+    } catch (error) {
+      console.error("Error setting up fulfillment API:", error);
+      showToast("Failed to setup fulfillment API", "error");
+    } finally {
+      setSettingUpAPI(false);
+    }
+  };
 
   const handleQuantityChange = (itemId: string, quantity: number) => {
     setFulfillmentItems((items) =>
@@ -253,7 +299,92 @@ const FulfillmentOverlay: React.FC<FulfillmentOverlayProps> = ({
 
           {/* Body */}
           <div className="bg-white px-6 py-4 max-h-96 overflow-y-auto">
-            {fulfillmentItems.length === 0 ? (
+            {checkingAPI ? (
+              <div className="text-center py-8">
+                <svg
+                  className="animate-spin h-8 w-8 text-indigo-600 mx-auto"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                >
+                  <circle
+                    className="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                  />
+                  <path
+                    className="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                  />
+                </svg>
+                <p className="mt-2 text-sm text-gray-600">
+                  Checking fulfillment API...
+                </p>
+              </div>
+            ) : apiExists === false ? (
+              <div className="text-center py-8">
+                <svg
+                  className="mx-auto h-16 w-16 text-yellow-400"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"
+                  />
+                </svg>
+                <h3 className="mt-4 text-lg font-medium text-gray-900">
+                  Setup Required
+                </h3>
+                <p className="mt-2 text-sm text-gray-500 max-w-md mx-auto">
+                  The order fulfillment API needs to be set up before you can
+                  create fulfillments. This will create a custom API with the
+                  necessary fields in Elastic Path.
+                </p>
+                <div className="mt-6">
+                  <button
+                    onClick={handleSetupAPI}
+                    disabled={settingUpAPI}
+                    className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {settingUpAPI ? (
+                      <>
+                        <svg
+                          className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
+                          xmlns="http://www.w3.org/2000/svg"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                        >
+                          <circle
+                            className="opacity-25"
+                            cx="12"
+                            cy="12"
+                            r="10"
+                            stroke="currentColor"
+                            strokeWidth="4"
+                          />
+                          <path
+                            className="opacity-75"
+                            fill="currentColor"
+                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                          />
+                        </svg>
+                        Setting up API...
+                      </>
+                    ) : (
+                      "Setup Fulfillment API"
+                    )}
+                  </button>
+                </div>
+              </div>
+            ) : fulfillmentItems.length === 0 ? (
               <div className="text-center py-8">
                 <svg
                   className="mx-auto h-12 w-12 text-gray-400"
@@ -380,7 +511,7 @@ const FulfillmentOverlay: React.FC<FulfillmentOverlayProps> = ({
           </div>
 
           {/* Fulfillment Details Form */}
-          {fulfillmentItems.length > 0 && (
+          {apiExists && fulfillmentItems.length > 0 && (
             <div className="bg-gray-50 px-6 py-4 border-t border-gray-200">
               <h4 className="text-sm font-medium text-gray-900 mb-3">
                 Fulfillment Details
@@ -427,7 +558,7 @@ const FulfillmentOverlay: React.FC<FulfillmentOverlayProps> = ({
           )}
 
           {/* Existing Fulfillments */}
-          {existingFulfillments.length > 0 && (
+          {apiExists && existingFulfillments.length > 0 && (
             <div className="bg-white px-6 py-4 border-t border-gray-200">
               <h4 className="text-sm font-medium text-gray-900 mb-3">
                 Existing Fulfillments
@@ -478,20 +609,22 @@ const FulfillmentOverlay: React.FC<FulfillmentOverlayProps> = ({
 
           {/* Footer */}
           <div className="bg-gray-50 px-6 py-3 sm:flex sm:flex-row-reverse border-t border-gray-200">
-            <button
-              onClick={handleCreateFulfillment}
-              disabled={loading || selectedItems.length === 0}
-              className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-indigo-600 text-base font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:ml-3 sm:w-auto sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {loading
-                ? "Creating..."
-                : `Create Fulfillment (${totalSelectedQuantity} items)`}
-            </button>
+            {apiExists && (
+              <button
+                onClick={handleCreateFulfillment}
+                disabled={loading || selectedItems.length === 0}
+                className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-indigo-600 text-base font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:ml-3 sm:w-auto sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {loading
+                  ? "Creating..."
+                  : `Create Fulfillment (${totalSelectedQuantity} items)`}
+              </button>
+            )}
             <button
               onClick={onClose}
               className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
             >
-              Cancel
+              {apiExists === false ? "Close" : "Cancel"}
             </button>
           </div>
         </div>
