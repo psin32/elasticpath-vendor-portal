@@ -101,6 +101,7 @@ export default function OrderDetailsPage({ params }: OrderDetailsPageProps) {
     fetchFulfillments,
     checkOrderFulfillmentAPI,
     createOrderFulfillmentAPI,
+    fulfilOrder,
   } = useEpccApi(selectedOrgId || undefined, selectedStoreId || undefined);
 
   // Redirect if not authenticated
@@ -116,6 +117,41 @@ export default function OrderDetailsPage({ params }: OrderDetailsPageProps) {
       loadOrder();
     }
   }, [selectedOrgId, selectedStoreId, orderId]);
+
+  // Auto-fulfill order when all items are fulfilled
+  useEffect(() => {
+    if (
+      order &&
+      orderItems.length > 0 &&
+      fulfillments.length > 0 &&
+      isOrderFullyFulfilled
+    ) {
+      // Check if order is not already fulfilled to avoid duplicate calls
+      if (order.shipping !== "fulfilled") {
+        const autoFulfillOrder = async () => {
+          try {
+            console.log(
+              "All items fulfilled, auto-fulfilling order:",
+              order.id
+            );
+            const result = await fulfilOrder(order.id);
+            if (result?.data) {
+              // Update the order state to reflect the fulfilled status
+              setOrder((prev) =>
+                prev ? { ...prev, shipping: "fulfilled" } : null
+              );
+              console.log("Order automatically fulfilled:", result.data);
+            }
+          } catch (error) {
+            console.error("Failed to auto-fulfill order:", error);
+            // You might want to show a toast notification here
+          }
+        };
+
+        autoFulfillOrder();
+      }
+    }
+  }, [order, orderItems, fulfillments, isOrderFullyFulfilled, fulfilOrder]);
 
   const loadOrder = async () => {
     if (!selectedStoreId || !orderId) return;

@@ -1058,6 +1058,34 @@ export const useEpccApi = (orgId?: string, storeId?: string) => {
   );
 
   /**
+   * Fulfil order
+   */
+  const fulfilOrder = useCallback(
+    async (orderId: string) => {
+      return apiCall(async (client) => {
+        return await client.Orders.Update(orderId, {
+          shipping: "fulfilled",
+        });
+      }, "Failed to fulfil order");
+    },
+    [apiCall]
+  );
+
+  /**
+   * Cancel order
+   */
+  const cancelOrder = useCallback(
+    async (orderId: string) => {
+      return apiCall(async (client) => {
+        return await client.Orders.Update(orderId, {
+          status: "cancelled",
+        });
+      }, "Failed to cancel order");
+    },
+    [apiCall]
+  );
+
+  /**
    * Fetch all currencies
    */
   const fetchCurrencies = useCallback(async () => {
@@ -1134,6 +1162,8 @@ export const useEpccApi = (orgId?: string, storeId?: string) => {
     updateFulfillment,
     checkOrderFulfillmentAPI,
     createOrderFulfillmentAPI,
+    fulfilOrder,
+    cancelOrder,
 
     // Utility methods
     clearApiError: () => setApiError(null),
