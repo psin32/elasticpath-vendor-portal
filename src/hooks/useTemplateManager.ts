@@ -185,7 +185,6 @@ export const useTemplateManager = () => {
           }
           break;
       }
-      console.log("field.validationRules", field.validationRules);
 
       // Custom validation rules
       field.validationRules?.forEach((rule) => {

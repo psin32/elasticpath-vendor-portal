@@ -9,6 +9,9 @@ const nextConfig = {
         path: false,
         os: false,
         crypto: false,
+        net: false,
+        tls: false,
+        child_process: false,
       };
     }
     return config;
