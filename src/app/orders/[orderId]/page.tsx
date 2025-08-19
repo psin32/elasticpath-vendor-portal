@@ -170,10 +170,12 @@ export default function OrderDetailsPage({ params }: OrderDetailsPageProps) {
       if (orderData) {
         setOrder(orderData.data);
 
-        // Extract order items if available, excluding promotion_items
+        // Extract order items if available, excluding promotion_items and items without product_id
         if (orderData.included?.items) {
           const items = orderData.included?.items
-            .filter((item: any) => item.type !== "promotion_item")
+            .filter(
+              (item: any) => item.type !== "promotion_item" && item.product_id
+            )
             .map((item: any) => item as OrderItem);
           setOrderItems(items);
         }
