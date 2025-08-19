@@ -1,5 +1,10 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Optimize for serverless deployment
+  experimental: {
+    serverComponentsExternalPackages: ["@sparticuz/chromium", "puppeteer-core"],
+  },
+
   webpack: (config, { isServer }) => {
     if (!isServer) {
       // Fallbacks for client-side
@@ -14,6 +19,12 @@ const nextConfig = {
         child_process: false,
       };
     }
+
+    // Exclude binaries from webpack bundling
+    if (isServer) {
+      config.externals = [...(config.externals || []), "@sparticuz/chromium"];
+    }
+
     return config;
   },
 };

@@ -1,4 +1,5 @@
-import puppeteer from "puppeteer";
+import puppeteer from "puppeteer-core";
+import chromium from "@sparticuz/chromium";
 import { generatePackingSlipHTML } from "../templates/packingSlipTemplate";
 
 export interface PackingSlipData {
@@ -59,16 +60,53 @@ export async function generatePackingSlipPDF(
   let browser;
 
   try {
-    // Launch browser
-    browser = await puppeteer.launch({
-      headless: true,
-      args: [
-        "--no-sandbox",
-        "--disable-setuid-sandbox",
-        "--disable-web-security",
-        "--disable-features=VizDisplayCompositor",
-      ],
-    });
+    // Determine if running in serverless environment (Vercel)
+    const isServerless =
+      process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME;
+
+    // Launch browser with environment-appropriate configuration
+    if (isServerless) {
+      // Serverless configuration (Vercel/AWS)
+      browser = await puppeteer.launch({
+        args: [
+          ...chromium.args,
+          "--no-sandbox",
+          "--disable-setuid-sandbox",
+          "--disable-web-security",
+          "--disable-features=VizDisplayCompositor",
+        ],
+        defaultViewport: { width: 1280, height: 720 },
+        executablePath: await chromium.executablePath(),
+        headless: true,
+      });
+    } else {
+      // Local development configuration
+      try {
+        // Try to use local Chrome installation
+        const puppeteerFull = await import("puppeteer");
+        browser = await puppeteerFull.default.launch({
+          headless: true,
+          args: [
+            "--no-sandbox",
+            "--disable-setuid-sandbox",
+            "--disable-web-security",
+            "--disable-features=VizDisplayCompositor",
+          ],
+        });
+      } catch (localError) {
+        // Fallback to puppeteer-core with system Chrome
+        console.warn("Full puppeteer not available, using puppeteer-core");
+        browser = await puppeteer.launch({
+          headless: true,
+          args: [
+            "--no-sandbox",
+            "--disable-setuid-sandbox",
+            "--disable-web-security",
+            "--disable-features=VizDisplayCompositor",
+          ],
+        });
+      }
+    }
 
     const page = await browser.newPage();
 
