@@ -112,8 +112,13 @@ export default function OrdersPage() {
   const filteredOrders = orders.filter(
     (order: any) =>
       order.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      order.customer.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      order.attributes.status.toLowerCase().includes(searchTerm.toLowerCase())
+      order.customer?.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      order.contact?.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      order.status.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      order.payment.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (order.shipping || "pending")
+        .toLowerCase()
+        .includes(searchTerm.toLowerCase())
   );
 
   const handlePageChange = (page: number) => {
@@ -156,6 +161,21 @@ export default function OrdersPage() {
       case "pending":
         return "bg-yellow-100 text-yellow-800";
       case "failed":
+        return "bg-red-100 text-red-800";
+      default:
+        return "bg-gray-100 text-gray-800";
+    }
+  };
+
+  const getShippingStatusColor = (status: string) => {
+    switch (status.toLowerCase()) {
+      case "fulfilled":
+        return "bg-green-100 text-green-800";
+      case "shipped":
+        return "bg-blue-100 text-blue-800";
+      case "pending":
+        return "bg-yellow-100 text-yellow-800";
+      case "cancelled":
         return "bg-red-100 text-red-800";
       default:
         return "bg-gray-100 text-gray-800";
@@ -208,7 +228,7 @@ export default function OrdersPage() {
                   <div className="flex-1 max-w-md">
                     <input
                       type="text"
-                      placeholder="Search orders by number, email, or status..."
+                      placeholder="Search orders by number, email, status, payment, or shipping..."
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
                       className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
@@ -356,6 +376,9 @@ export default function OrdersPage() {
                             Payment
                           </th>
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Shipping
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                             Total
                           </th>
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -401,6 +424,15 @@ export default function OrdersPage() {
                                 )}`}
                               >
                                 {order.payment}
+                              </span>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <span
+                                className={`inline-flex px-2 py-1 text-xs font-semibold rounded-sm capitalize ${getShippingStatusColor(
+                                  order.shipping || "pending"
+                                )}`}
+                              >
+                                {order.shipping || "pending"}
                               </span>
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap">

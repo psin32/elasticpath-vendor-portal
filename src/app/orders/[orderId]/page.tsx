@@ -508,7 +508,8 @@ export default function OrderDetailsPage({ params }: OrderDetailsPageProps) {
                             {order.payment}
                           </span>
                         )}
-                        {isOrderFullyFulfilled ? (
+                        {order?.shipping?.toLowerCase() === "fulfilled" ||
+                        isOrderFullyFulfilled ? (
                           <span className="inline-flex items-center px-4 py-2 bg-green-100 text-green-800 text-sm font-medium rounded-md">
                             <svg
                               className="w-4 h-4 mr-2"
