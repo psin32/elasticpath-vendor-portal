@@ -20,6 +20,7 @@
     "eslint-config-next": "14.0.4",
     "jsbarcode": "^3.12.1",
     "next": "14.0.4",
+    "openai": "^5.13.1",
     "postcss": "^8",
     "puppeteer-core": "^24.16.2",
     "react": "^18",
