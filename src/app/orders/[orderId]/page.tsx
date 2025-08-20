@@ -10,6 +10,7 @@ import { useDashboard } from "../../../hooks/useDashboard";
 import { Order, OrderItem } from "@elasticpath/js-sdk";
 import { OrderItemPromotions } from "../../../components/orders/OrderItemPromotions";
 import FulfillmentOverlay from "../../../components/orders/FulfillmentOverlay";
+import OrderFulfillmentTab from "../../../components/orders/OrderFulfillmentTab";
 import {
   generateAndDownloadPackingSlip,
   type PackingSlipData,
@@ -51,6 +52,9 @@ export default function OrderDetailsPage({ params }: OrderDetailsPageProps) {
   const [generatingShippingLabel, setGeneratingShippingLabel] = useState<
     string | null
   >(null);
+  const [activeTab, setActiveTab] = useState<"details" | "fulfillment">(
+    "details"
+  );
 
   // Group items by shipping group
   const itemsByShippingGroup = useMemo(() => {
@@ -585,714 +589,148 @@ export default function OrderDetailsPage({ params }: OrderDetailsPageProps) {
                     </div>
                   </div>
 
-                  {/* Order Details Grid */}
-                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    {/* Order Items */}
-                    <div className="lg:col-span-2">
-                      <div className="bg-white border border-gray-200 rounded-lg shadow-sm">
-                        <div className="px-6 py-4 border-b border-gray-200">
-                          <h2 className="text-lg font-medium text-gray-900">
-                            Order Items
-                          </h2>
-                        </div>
-                        <div className="divide-y divide-gray-200">
-                          {orderItems.length > 0 ? (
-                            Object.entries(itemsByShippingGroup).map(
-                              ([groupId, items]) => {
-                                const shippingGroup = shippingGroups.find(
-                                  (g) => g.id === groupId
-                                );
-                                return (
-                                  <div
-                                    key={groupId}
-                                    className="divide-y divide-gray-200"
-                                  >
-                                    {/* Shipping Group Header */}
-                                    {groupId !== "__no_group__" &&
-                                      shippingGroup && (
-                                        <div className="px-6 py-4 bg-gray-50">
-                                          <div className="flex flex-col gap-2">
-                                            <div className="flex items-center justify-between">
-                                              <h3 className="text-sm font-medium text-gray-900">
-                                                Shipping Group
-                                              </h3>
-                                              <span className="text-xs text-gray-500">
-                                                {shippingGroup.created_at
-                                                  ? formatDate(
-                                                      shippingGroup.created_at
-                                                    )
-                                                  : ""}
-                                              </span>
-                                            </div>
-                                            <div className="flex flex-wrap gap-4 text-sm text-gray-600">
-                                              {shippingGroup.shipping_type && (
-                                                <span>
-                                                  Type:{" "}
-                                                  <span className="font-medium text-gray-900">
-                                                    {
-                                                      shippingGroup.shipping_type
-                                                    }
-                                                  </span>
-                                                </span>
-                                              )}
-                                              {shippingGroup.meta
-                                                ?.shipping_display_price?.total
-                                                ?.formatted && (
-                                                <span>
-                                                  Shipping:{" "}
-                                                  <span className="font-medium text-gray-900">
-                                                    {
-                                                      shippingGroup.meta
-                                                        .shipping_display_price
-                                                        .total.formatted
-                                                    }
-                                                  </span>
-                                                </span>
-                                              )}
-                                              {shippingGroup.tracking_reference && (
-                                                <span>
-                                                  Tracking:{" "}
-                                                  <span className="font-medium text-gray-900">
-                                                    {
-                                                      shippingGroup.tracking_reference
-                                                    }
-                                                  </span>
-                                                </span>
-                                              )}
-                                              {shippingGroup.address && (
-                                                <span className="text-sm text-gray-600">
-                                                  {[
-                                                    shippingGroup.address
-                                                      .first_name +
-                                                      " " +
-                                                      shippingGroup.address
-                                                        .last_name,
-                                                    shippingGroup.address
-                                                      .line_1,
-                                                    shippingGroup.address
-                                                      .line_2,
-                                                    shippingGroup.address.city,
-                                                    shippingGroup.address
-                                                      .region,
-                                                    shippingGroup.address
-                                                      .postcode,
-                                                    shippingGroup.address
-                                                      .country,
-                                                  ]
-                                                    .filter(Boolean)
-                                                    .join(", ")}
-                                                </span>
-                                              )}
-                                            </div>
-                                          </div>
-                                        </div>
-                                      )}
-                                    {/* Order Items */}
-                                    {items.map((item, index) => (
-                                      <div key={index} className="p-6">
-                                        <div className="flex items-center space-x-4">
-                                          <div className="flex-shrink-0">
-                                            <div className="w-16 h-16 bg-gray-100 rounded-lg flex items-center justify-center">
-                                              <svg
-                                                className="w-8 h-8 text-gray-400"
-                                                fill="none"
-                                                stroke="currentColor"
-                                                viewBox="0 0 24 24"
-                                              >
-                                                <path
-                                                  strokeLinecap="round"
-                                                  strokeLinejoin="round"
-                                                  strokeWidth={2}
-                                                  d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
-                                                />
-                                              </svg>
-                                            </div>
-                                          </div>
-                                          <div className="flex-1 min-w-0">
-                                            <p className="text-sm font-medium text-gray-900 truncate">
-                                              {item.name || `Item ${index + 1}`}
-                                            </p>
-                                            <p className="text-sm text-gray-500">
-                                              Quantity: {item.quantity || 1}
-                                            </p>
-                                            {item.sku && (
-                                              <p className="text-sm text-gray-500">
-                                                SKU: {item.sku}
-                                              </p>
-                                            )}
-                                            <OrderItemPromotions
-                                              item={item}
-                                              promotions={promotions}
-                                            />
-                                          </div>
-                                          <div className="text-right flex flex-col">
-                                            <p className="text-sm font-medium text-gray-900">
-                                              {
-                                                item.meta?.display_price
-                                                  ?.with_tax?.value.formatted
-                                              }
-                                            </p>
-                                            {item.meta?.display_price
-                                              ?.without_discount?.value
-                                              .amount !==
-                                              item.meta?.display_price?.with_tax
-                                                ?.value.amount && (
-                                              <p className="text-sm text-gray-500 line-through">
-                                                {
-                                                  item.meta?.display_price
-                                                    ?.without_discount?.value
-                                                    .formatted
-                                                }
-                                              </p>
-                                            )}
-                                          </div>
-                                        </div>
-                                      </div>
-                                    ))}
-                                  </div>
-                                );
-                              }
-                            )
-                          ) : (
-                            <div className="p-6 text-center text-gray-500">
-                              No items found for this order
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Order Summary */}
-                    <div className="lg:col-span-1">
-                      <div className="bg-white border border-gray-200 rounded-lg shadow-sm">
-                        <div className="px-6 py-4 border-b border-gray-200">
-                          <h2 className="text-lg font-medium text-gray-900">
-                            Order Summary
-                          </h2>
-                        </div>
-                        <div className="p-6 space-y-4">
-                          <div className="flex justify-between">
-                            <span className="text-sm text-gray-600">
-                              Subtotal
-                            </span>
-                            <span className="text-sm font-medium">
-                              {order.meta.display_price.without_tax.formatted}
-                            </span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-sm text-gray-600">
-                              Shipping
-                            </span>
-                            <span className="text-sm font-medium">
-                              {order.meta.display_price.shipping.formatted}
-                            </span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-sm text-gray-600">Tax</span>
-                            <span className="text-sm font-medium">
-                              {order.meta.display_price.tax.formatted}
-                            </span>
-                          </div>
-                          {order.meta.display_price.discount.amount > 0 && (
-                            <div className="flex justify-between">
-                              <span className="text-sm text-gray-600">
-                                Discount
-                              </span>
-                              <span className="text-sm font-medium text-green-600">
-                                -{order.meta.display_price.discount.formatted}
-                              </span>
-                            </div>
-                          )}
-                          <div className="border-t border-gray-200 pt-4">
-                            <div className="flex justify-between">
-                              <span className="text-base font-medium text-gray-900">
-                                Total
-                              </span>
-                              <span className="text-base font-bold text-gray-900">
-                                {order.meta.display_price.with_tax.formatted}
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Customer Information */}
-                      <div className="mt-6 bg-white border border-gray-200 rounded-lg shadow-sm">
-                        <div className="px-6 py-4 border-b border-gray-200">
-                          <h2 className="text-lg font-medium text-gray-900">
-                            Customer Information
-                          </h2>
-                        </div>
-                        <div className="p-6 space-y-3">
-                          {order.contact?.name && (
-                            <div>
-                              <p className="text-sm font-medium text-gray-900">
-                                Name
-                              </p>
-                              <p className="text-sm text-gray-600">
-                                {order.contact.name}
-                              </p>
-                            </div>
-                          )}
-                          {order.contact?.email && (
-                            <div>
-                              <p className="text-sm font-medium text-gray-900">
-                                Email
-                              </p>
-                              <p className="text-sm text-gray-600">
-                                {order.contact.email}
-                              </p>
-                            </div>
-                          )}
-                          {/* Only show shipping address if no shipping groups exist */}
-                          {order.shipping_address &&
-                            shippingGroups.length === 0 && (
-                              <div>
-                                <p className="text-sm font-medium text-gray-900">
-                                  Shipping Address
-                                </p>
-                                <p className="text-sm text-gray-600">
-                                  {order.shipping_address.first_name}{" "}
-                                  {order.shipping_address.last_name}
-                                  <br />
-                                  {order.shipping_address.line_1}
-                                  {order.shipping_address.line_2 && (
-                                    <>
-                                      <br />
-                                      {order.shipping_address.line_2}
-                                    </>
-                                  )}
-                                  <br />
-                                  {order.shipping_address.city},{" "}
-                                  {order.shipping_address.region}{" "}
-                                  {order.shipping_address.postcode}
-                                  <br />
-                                  {order.shipping_address.country}
-                                </p>
-                              </div>
-                            )}
-                        </div>
-                      </div>
-                    </div>
+                  {/* Tab Navigation */}
+                  <div className="border-b border-gray-200 mb-6">
+                    <nav className="-mb-px flex space-x-8">
+                      <button
+                        onClick={() => setActiveTab("details")}
+                        className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                          activeTab === "details"
+                            ? "border-indigo-500 text-indigo-600"
+                            : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                        }`}
+                      >
+                        Order Details
+                      </button>
+                      <button
+                        onClick={() => setActiveTab("fulfillment")}
+                        className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                          activeTab === "fulfillment"
+                            ? "border-indigo-500 text-indigo-600"
+                            : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                        }`}
+                      >
+                        Fulfillment
+                        {fulfillments.length > 0 && (
+                          <span className="ml-2 bg-indigo-100 text-indigo-600 py-0.5 px-2 rounded-full text-xs">
+                            {fulfillments.length}
+                          </span>
+                        )}
+                      </button>
+                    </nav>
                   </div>
 
-                  {/* Fulfillments Section */}
-                  <div className="mt-6">
-                    <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
-                      <div className="bg-gradient-to-r from-indigo-50 to-blue-50 px-6 py-5 border-b border-gray-200">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center space-x-3">
-                            <div className="flex-shrink-0">
-                              <div className="w-8 h-8 bg-indigo-100 rounded-lg flex items-center justify-center">
-                                <svg
-                                  className="w-5 h-5 text-indigo-600"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  viewBox="0 0 24 24"
-                                >
-                                  <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth={2}
-                                    d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
-                                  />
-                                </svg>
-                              </div>
-                            </div>
-                            <div>
-                              <h2 className="text-lg font-semibold text-gray-900">
-                                Order Fulfillments
-                              </h2>
-                              <p className="text-sm text-gray-600">
-                                {fulfillments.length === 0
-                                  ? "No fulfillments yet"
-                                  : `${fulfillments.length} fulfillment${
-                                      fulfillments.length !== 1 ? "s" : ""
-                                    } • ${fulfillments.reduce(
-                                      (total, f) =>
-                                        total +
-                                        f.items.reduce(
-                                          (sum: number, item: any) =>
-                                            sum + item.quantity,
-                                          0
-                                        ),
-                                      0
-                                    )} items fulfilled`}
-                              </p>
-                            </div>
+                  {/* Tab Content */}
+                  {activeTab === "details" ? (
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                      <div className="lg:col-span-2">
+                        <div className="bg-white border border-gray-200 rounded-lg shadow-sm">
+                          <div className="px-6 py-4 border-b border-gray-200">
+                            <h2 className="text-lg font-medium text-gray-900">
+                              Order Items
+                            </h2>
                           </div>
-                        </div>
-                      </div>
-                      <div className="p-6">
-                        {fulfillments.length === 0 ? (
-                          <div className="text-center py-12">
-                            <div className="mx-auto w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mb-4">
-                              <svg
-                                className="w-12 h-12 text-gray-400"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={1.5}
-                                  d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
-                                />
-                              </svg>
-                            </div>
-                            <h3 className="text-lg font-medium text-gray-900 mb-2">
-                              No fulfillments yet
-                            </h3>
-                            <p className="text-sm text-gray-500 mb-6 max-w-sm mx-auto">
-                              Create your first fulfillment to start shipping
-                              items from this order to your customers.
-                            </p>
-                            <button
-                              onClick={() => setShowFulfillmentOverlay(true)}
-                              className="inline-flex items-center px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors duration-200"
-                            >
-                              <svg
-                                className="w-4 h-4 mr-2"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={2}
-                                  d="M12 4v16m8-8H4"
-                                />
-                              </svg>
-                              Create First Fulfillment
-                            </button>
-                          </div>
-                        ) : (
-                          <div className="space-y-6">
-                            {fulfillments.map((fulfillment, index) => (
-                              <div
-                                key={fulfillment.id}
-                                className="bg-gradient-to-r from-gray-50 to-gray-50/50 border border-gray-200 rounded-xl p-6 hover:shadow-md transition-shadow duration-200"
-                              >
-                                <div className="flex justify-between items-start mb-5">
-                                  <div className="flex items-start space-x-4">
-                                    <div className="flex-shrink-0">
-                                      <div className="w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center">
-                                        <span className="text-sm font-semibold text-indigo-600">
-                                          {index + 1}
-                                        </span>
-                                      </div>
-                                    </div>
-                                    <div className="flex-1">
-                                      <div className="flex items-center space-x-3 mb-2">
-                                        <h4 className="text-base font-semibold text-gray-900">
-                                          Fulfillment #{fulfillment.id}
-                                        </h4>
-                                        <span
-                                          className={`inline-flex items-center px-2.5 py-0.5 text-xs font-medium rounded-full ${
-                                            fulfillment.status === "fulfilled"
-                                              ? "bg-green-100 text-green-800"
-                                              : fulfillment.status === "partial"
-                                              ? "bg-yellow-100 text-yellow-800"
-                                              : fulfillment.status === "pending"
-                                              ? "bg-blue-100 text-blue-800"
-                                              : "bg-gray-100 text-gray-800"
-                                          }`}
-                                        >
-                                          <div
-                                            className={`w-2 h-2 rounded-full mr-1.5 ${
-                                              fulfillment.status === "fulfilled"
-                                                ? "bg-green-400"
-                                                : fulfillment.status ===
-                                                  "partial"
-                                                ? "bg-yellow-400"
-                                                : fulfillment.status ===
-                                                  "pending"
-                                                ? "bg-blue-400"
-                                                : "bg-gray-400"
-                                            }`}
-                                          ></div>
-                                          {fulfillment.status
-                                            .charAt(0)
-                                            .toUpperCase() +
-                                            fulfillment.status.slice(1)}
-                                        </span>
-                                      </div>
-                                      <p className="text-sm text-gray-500 mb-3">
-                                        Created on{" "}
-                                        {new Date(
-                                          fulfillment.created_at
-                                        ).toLocaleDateString("en-US", {
-                                          year: "numeric",
-                                          month: "long",
-                                          day: "numeric",
-                                          hour: "2-digit",
-                                          minute: "2-digit",
-                                        })}
-                                      </p>
-                                    </div>
-                                  </div>
-                                  <div className="flex items-center space-x-2">
-                                    <button
-                                      onClick={() => {
-                                        handleGeneratePackingSlip(fulfillment);
-                                      }}
-                                      disabled={
-                                        generatingPackingSlip === fulfillment.id
-                                      }
-                                      className={`inline-flex items-center px-3 py-1.5 text-white text-xs font-medium rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200 ${
-                                        generatingPackingSlip === fulfillment.id
-                                          ? "bg-blue-400 cursor-not-allowed"
-                                          : "bg-blue-600 hover:bg-blue-700"
-                                      }`}
+                          <div className="divide-y divide-gray-200">
+                            {orderItems.length > 0 ? (
+                              Object.entries(itemsByShippingGroup).map(
+                                ([groupId, items]) => {
+                                  const shippingGroup = shippingGroups.find(
+                                    (g) => g.id === groupId
+                                  );
+                                  return (
+                                    <div
+                                      key={groupId}
+                                      className="divide-y divide-gray-200"
                                     >
-                                      {generatingPackingSlip ===
-                                      fulfillment.id ? (
-                                        <>
-                                          <svg
-                                            className="animate-spin w-3 h-3 mr-1.5"
-                                            fill="none"
-                                            viewBox="0 0 24 24"
-                                          >
-                                            <circle
-                                              className="opacity-25"
-                                              cx="12"
-                                              cy="12"
-                                              r="10"
-                                              stroke="currentColor"
-                                              strokeWidth="4"
-                                            />
-                                            <path
-                                              className="opacity-75"
-                                              fill="currentColor"
-                                              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                                            />
-                                          </svg>
-                                          Generating...
-                                        </>
-                                      ) : (
-                                        <>
-                                          <svg
-                                            className="w-3 h-3 mr-1.5"
-                                            fill="none"
-                                            stroke="currentColor"
-                                            viewBox="0 0 24 24"
-                                          >
-                                            <path
-                                              strokeLinecap="round"
-                                              strokeLinejoin="round"
-                                              strokeWidth={2}
-                                              d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                                            />
-                                          </svg>
-                                          Packing Slip
-                                        </>
-                                      )}
-                                    </button>
-
-                                    {/* Shipping Label Button - Only show if tracking reference exists */}
-                                    {fulfillment.tracking_reference && (
-                                      <button
-                                        onClick={() => {
-                                          handleGenerateShippingLabel(
-                                            fulfillment
-                                          );
-                                        }}
-                                        disabled={
-                                          generatingShippingLabel ===
-                                          fulfillment.id
-                                        }
-                                        className={`inline-flex items-center px-3 py-1.5 text-white text-xs font-medium rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors duration-200 ${
-                                          generatingShippingLabel ===
-                                          fulfillment.id
-                                            ? "bg-green-400 cursor-not-allowed"
-                                            : "bg-green-600 hover:bg-green-700"
-                                        }`}
-                                      >
-                                        {generatingShippingLabel ===
-                                        fulfillment.id ? (
-                                          <>
-                                            <svg
-                                              className="animate-spin w-3 h-3 mr-1.5"
-                                              fill="none"
-                                              viewBox="0 0 24 24"
-                                            >
-                                              <circle
-                                                className="opacity-25"
-                                                cx="12"
-                                                cy="12"
-                                                r="10"
-                                                stroke="currentColor"
-                                                strokeWidth="4"
-                                              />
-                                              <path
-                                                className="opacity-75"
-                                                fill="currentColor"
-                                                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                                              />
-                                            </svg>
-                                            Generating...
-                                          </>
-                                        ) : (
-                                          <>
-                                            <svg
-                                              className="w-3 h-3 mr-1.5"
-                                              fill="none"
-                                              stroke="currentColor"
-                                              viewBox="0 0 24 24"
-                                            >
-                                              <path
-                                                strokeLinecap="round"
-                                                strokeLinejoin="round"
-                                                strokeWidth={2}
-                                                d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"
-                                              />
-                                            </svg>
-                                            Shipping Label
-                                          </>
+                                      {/* Shipping Group Header */}
+                                      {groupId !== "__no_group__" &&
+                                        shippingGroup && (
+                                          <div className="px-6 py-4 bg-gray-50">
+                                            <div className="flex flex-col gap-2">
+                                              <div className="flex items-center justify-between">
+                                                <h3 className="text-sm font-medium text-gray-900">
+                                                  Shipping Group
+                                                </h3>
+                                                <span className="text-xs text-gray-500">
+                                                  {shippingGroup.created_at
+                                                    ? formatDate(
+                                                        shippingGroup.created_at
+                                                      )
+                                                    : ""}
+                                                </span>
+                                              </div>
+                                              <div className="flex flex-wrap gap-4 text-sm text-gray-600">
+                                                {shippingGroup.shipping_type && (
+                                                  <span>
+                                                    Type:{" "}
+                                                    <span className="font-medium text-gray-900">
+                                                      {
+                                                        shippingGroup.shipping_type
+                                                      }
+                                                    </span>
+                                                  </span>
+                                                )}
+                                                {shippingGroup.meta
+                                                  ?.shipping_display_price
+                                                  ?.total?.formatted && (
+                                                  <span>
+                                                    Shipping:{" "}
+                                                    <span className="font-medium text-gray-900">
+                                                      {
+                                                        shippingGroup.meta
+                                                          .shipping_display_price
+                                                          .total.formatted
+                                                      }
+                                                    </span>
+                                                  </span>
+                                                )}
+                                                {shippingGroup.tracking_reference && (
+                                                  <span>
+                                                    Tracking:{" "}
+                                                    <span className="font-medium text-gray-900">
+                                                      {
+                                                        shippingGroup.tracking_reference
+                                                      }
+                                                    </span>
+                                                  </span>
+                                                )}
+                                                {shippingGroup.address && (
+                                                  <span className="text-sm text-gray-600">
+                                                    {[
+                                                      shippingGroup.address
+                                                        .first_name +
+                                                        " " +
+                                                        shippingGroup.address
+                                                          .last_name,
+                                                      shippingGroup.address
+                                                        .line_1,
+                                                      shippingGroup.address
+                                                        .line_2,
+                                                      shippingGroup.address
+                                                        .city,
+                                                      shippingGroup.address
+                                                        .region,
+                                                      shippingGroup.address
+                                                        .postcode,
+                                                      shippingGroup.address
+                                                        .country,
+                                                    ]
+                                                      .filter(Boolean)
+                                                      .join(", ")}
+                                                  </span>
+                                                )}
+                                              </div>
+                                            </div>
+                                          </div>
                                         )}
-                                      </button>
-                                    )}
-                                  </div>
-                                </div>
-
-                                {/* Fulfillment Details Grid */}
-                                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-5">
-                                  {/* Tracking Information */}
-                                  {fulfillment.tracking_reference && (
-                                    <div className="bg-white rounded-lg p-4 border border-gray-200">
-                                      <div className="flex items-center space-x-2 mb-2">
-                                        <svg
-                                          className="w-4 h-4 text-blue-500"
-                                          fill="none"
-                                          stroke="currentColor"
-                                          viewBox="0 0 24 24"
-                                        >
-                                          <path
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                            strokeWidth={2}
-                                            d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
-                                          />
-                                          <path
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                            strokeWidth={2}
-                                            d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
-                                          />
-                                        </svg>
-                                        <h6 className="text-sm font-medium text-gray-900">
-                                          Tracking
-                                        </h6>
-                                      </div>
-                                      <p className="text-sm text-gray-600 font-mono">
-                                        {fulfillment.tracking_reference}
-                                      </p>
-                                    </div>
-                                  )}
-
-                                  {/* Shipping Method */}
-                                  {fulfillment.shipping_method && (
-                                    <div className="bg-white rounded-lg p-4 border border-gray-200">
-                                      <div className="flex items-center space-x-2 mb-2">
-                                        <svg
-                                          className="w-4 h-4 text-green-500"
-                                          fill="none"
-                                          stroke="currentColor"
-                                          viewBox="0 0 24 24"
-                                        >
-                                          <path
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                            strokeWidth={2}
-                                            d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"
-                                          />
-                                        </svg>
-                                        <h6 className="text-sm font-medium text-gray-900">
-                                          Shipping Method
-                                        </h6>
-                                      </div>
-                                      <p className="text-sm text-gray-600">
-                                        {fulfillment.shipping_method}
-                                      </p>
-                                    </div>
-                                  )}
-
-                                  {/* Notes */}
-                                  {fulfillment.notes && (
-                                    <div className="bg-white rounded-lg p-4 border border-gray-200">
-                                      <div className="flex items-center space-x-2 mb-2">
-                                        <svg
-                                          className="w-4 h-4 text-yellow-500"
-                                          fill="none"
-                                          stroke="currentColor"
-                                          viewBox="0 0 24 24"
-                                        >
-                                          <path
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                            strokeWidth={2}
-                                            d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                                          />
-                                        </svg>
-                                        <h6 className="text-sm font-medium text-gray-900">
-                                          Notes
-                                        </h6>
-                                      </div>
-                                      <p className="text-sm text-gray-600">
-                                        {fulfillment.notes}
-                                      </p>
-                                    </div>
-                                  )}
-                                </div>
-
-                                {/* Fulfilled Items */}
-                                <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-                                  <div className="bg-gray-50 px-4 py-3 border-b border-gray-200">
-                                    <div className="flex items-center justify-between">
-                                      <h6 className="text-sm font-medium text-gray-900 flex items-center">
-                                        <svg
-                                          className="w-4 h-4 mr-2 text-indigo-500"
-                                          fill="none"
-                                          stroke="currentColor"
-                                          viewBox="0 0 24 24"
-                                        >
-                                          <path
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                            strokeWidth={2}
-                                            d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
-                                          />
-                                        </svg>
-                                        Fulfilled Items
-                                      </h6>
-                                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
-                                        {fulfillment.items.length} items •{" "}
-                                        {fulfillment.items.reduce(
-                                          (sum: number, item: any) =>
-                                            sum + item.quantity,
-                                          0
-                                        )}{" "}
-                                        units
-                                      </span>
-                                    </div>
-                                  </div>
-                                  <div className="divide-y divide-gray-100">
-                                    {fulfillment.items.map(
-                                      (item: any, itemIndex: number) => {
-                                        const orderItem = orderItems.find(
-                                          (oi) => oi.id === item.id
-                                        );
-                                        return (
-                                          <div
-                                            key={itemIndex}
-                                            className="px-4 py-3 flex items-center justify-between hover:bg-gray-50"
-                                          >
-                                            <div className="flex items-center space-x-3">
-                                              <div className="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center">
+                                      {/* Order Items */}
+                                      {items.map((item, index) => (
+                                        <div key={index} className="p-6">
+                                          <div className="flex items-center space-x-4">
+                                            <div className="flex-shrink-0">
+                                              <div className="w-16 h-16 bg-gray-100 rounded-lg flex items-center justify-center">
                                                 <svg
-                                                  className="w-4 h-4 text-gray-500"
+                                                  className="w-8 h-8 text-gray-400"
                                                   fill="none"
                                                   stroke="currentColor"
                                                   viewBox="0 0 24 24"
@@ -1305,36 +743,190 @@ export default function OrderDetailsPage({ params }: OrderDetailsPageProps) {
                                                   />
                                                 </svg>
                                               </div>
-                                              <div>
-                                                <p className="text-sm font-medium text-gray-900">
-                                                  {orderItem?.name ||
-                                                    `Item ${item.id}`}
-                                                </p>
-                                                {orderItem?.sku && (
-                                                  <p className="text-xs text-gray-500">
-                                                    SKU: {orderItem.sku}
-                                                  </p>
-                                                )}
-                                              </div>
                                             </div>
-                                            <div className="text-right">
-                                              <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-green-100 text-green-800">
-                                                Qty: {item.quantity}
-                                              </span>
+                                            <div className="flex-1 min-w-0">
+                                              <p className="text-sm font-medium text-gray-900 truncate">
+                                                {item.name ||
+                                                  `Item ${index + 1}`}
+                                              </p>
+                                              <p className="text-sm text-gray-500">
+                                                Quantity: {item.quantity || 1}
+                                              </p>
+                                              {item.sku && (
+                                                <p className="text-sm text-gray-500">
+                                                  SKU: {item.sku}
+                                                </p>
+                                              )}
+                                              <OrderItemPromotions
+                                                item={item}
+                                                promotions={promotions}
+                                              />
+                                            </div>
+                                            <div className="text-right flex flex-col">
+                                              <p className="text-sm font-medium text-gray-900">
+                                                {
+                                                  item.meta?.display_price
+                                                    ?.with_tax?.value.formatted
+                                                }
+                                              </p>
+                                              {item.meta?.display_price
+                                                ?.without_discount?.value
+                                                .amount !==
+                                                item.meta?.display_price
+                                                  ?.with_tax?.value.amount && (
+                                                <p className="text-sm text-gray-500 line-through">
+                                                  {
+                                                    item.meta?.display_price
+                                                      ?.without_discount?.value
+                                                      .formatted
+                                                  }
+                                                </p>
+                                              )}
                                             </div>
                                           </div>
-                                        );
-                                      }
-                                    )}
-                                  </div>
-                                </div>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  );
+                                }
+                              )
+                            ) : (
+                              <div className="p-6 text-center text-gray-500">
+                                No items found for this order
                               </div>
-                            ))}
+                            )}
                           </div>
-                        )}
+                        </div>
+                      </div>
+
+                      {/* Order Summary */}
+                      <div className="lg:col-span-1">
+                        <div className="bg-white border border-gray-200 rounded-lg shadow-sm">
+                          <div className="px-6 py-4 border-b border-gray-200">
+                            <h2 className="text-lg font-medium text-gray-900">
+                              Order Summary
+                            </h2>
+                          </div>
+                          <div className="p-6 space-y-4">
+                            <div className="flex justify-between">
+                              <span className="text-sm text-gray-600">
+                                Subtotal
+                              </span>
+                              <span className="text-sm font-medium">
+                                {order.meta.display_price.without_tax.formatted}
+                              </span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-sm text-gray-600">
+                                Shipping
+                              </span>
+                              <span className="text-sm font-medium">
+                                {order.meta.display_price.shipping.formatted}
+                              </span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-sm text-gray-600">Tax</span>
+                              <span className="text-sm font-medium">
+                                {order.meta.display_price.tax.formatted}
+                              </span>
+                            </div>
+                            {order.meta.display_price.discount.amount > 0 && (
+                              <div className="flex justify-between">
+                                <span className="text-sm text-gray-600">
+                                  Discount
+                                </span>
+                                <span className="text-sm font-medium text-green-600">
+                                  -{order.meta.display_price.discount.formatted}
+                                </span>
+                              </div>
+                            )}
+                            <div className="border-t border-gray-200 pt-4">
+                              <div className="flex justify-between">
+                                <span className="text-base font-medium text-gray-900">
+                                  Total
+                                </span>
+                                <span className="text-base font-bold text-gray-900">
+                                  {order.meta.display_price.with_tax.formatted}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Customer Information */}
+                        <div className="mt-6 bg-white border border-gray-200 rounded-lg shadow-sm">
+                          <div className="px-6 py-4 border-b border-gray-200">
+                            <h2 className="text-lg font-medium text-gray-900">
+                              Customer Information
+                            </h2>
+                          </div>
+                          <div className="p-6 space-y-3">
+                            {order.contact?.name && (
+                              <div>
+                                <p className="text-sm font-medium text-gray-900">
+                                  Name
+                                </p>
+                                <p className="text-sm text-gray-600">
+                                  {order.contact.name}
+                                </p>
+                              </div>
+                            )}
+                            {order.contact?.email && (
+                              <div>
+                                <p className="text-sm font-medium text-gray-900">
+                                  Email
+                                </p>
+                                <p className="text-sm text-gray-600">
+                                  {order.contact.email}
+                                </p>
+                              </div>
+                            )}
+                            {/* Only show shipping address if no shipping groups exist */}
+                            {order.shipping_address &&
+                              shippingGroups.length === 0 && (
+                                <div>
+                                  <p className="text-sm font-medium text-gray-900">
+                                    Shipping Address
+                                  </p>
+                                  <p className="text-sm text-gray-600">
+                                    {order.shipping_address.first_name}{" "}
+                                    {order.shipping_address.last_name}
+                                    <br />
+                                    {order.shipping_address.line_1}
+                                    {order.shipping_address.line_2 && (
+                                      <>
+                                        <br />
+                                        {order.shipping_address.line_2}
+                                      </>
+                                    )}
+                                    <br />
+                                    {order.shipping_address.city},{" "}
+                                    {order.shipping_address.region}{" "}
+                                    {order.shipping_address.postcode}
+                                    <br />
+                                    {order.shipping_address.country}
+                                  </p>
+                                </div>
+                              )}
+                          </div>
+                        </div>
                       </div>
                     </div>
-                  </div>
+                  ) : (
+                    /* Fulfillment Tab */
+                    <OrderFulfillmentTab
+                      order={order}
+                      orderItems={orderItems}
+                      fulfillments={fulfillments}
+                      isOrderFullyFulfilled={isOrderFullyFulfilled}
+                      showFulfillmentOverlay={showFulfillmentOverlay}
+                      setShowFulfillmentOverlay={setShowFulfillmentOverlay}
+                      generatingPackingSlip={generatingPackingSlip}
+                      generatingShippingLabel={generatingShippingLabel}
+                      handleGeneratePackingSlip={handleGeneratePackingSlip}
+                      handleGenerateShippingLabel={handleGenerateShippingLabel}
+                    />
+                  )}
                 </div>
               )}
             </div>
