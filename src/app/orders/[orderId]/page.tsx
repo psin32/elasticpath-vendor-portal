@@ -139,17 +139,12 @@ export default function OrderDetailsPage({ params }: OrderDetailsPageProps) {
       if (order.shipping !== "fulfilled") {
         const autoFulfillOrder = async () => {
           try {
-            console.log(
-              "All items fulfilled, auto-fulfilling order:",
-              order.id
-            );
             const result = await fulfilOrder(order.id);
             if (result?.data) {
               // Update the order state to reflect the fulfilled status
               setOrder((prev) =>
                 prev ? { ...prev, shipping: "fulfilled" } : null
               );
-              console.log("Order automatically fulfilled:", result.data);
             }
           } catch (error) {
             console.error("Failed to auto-fulfill order:", error);

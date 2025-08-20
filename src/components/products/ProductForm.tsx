@@ -5,6 +5,7 @@ import { useEpccApi } from "../../hooks/useEpccApi";
 import { ImageOverlay } from "../ui/ImageOverlay";
 import { PcmProduct, PcmProductResponse } from "@elasticpath/js-sdk";
 import { generateProductDescription } from "../../utils/descriptionGenerator";
+import { generateProductImage } from "../../utils/imageGenerator";
 
 interface ProductFormProps {
   mode: "create" | "edit";
@@ -49,6 +50,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [generatingDescription, setGeneratingDescription] = useState(false);
+  const [generatingImage, setGeneratingImage] = useState(false);
 
   const {
     createProduct,
@@ -255,6 +257,53 @@ export const ProductForm: React.FC<ProductFormProps> = ({
     }
   };
 
+  const handleGenerateImage = async () => {
+    if (!formData.name.trim()) {
+      setError("Product name is required to generate image");
+      setTimeout(() => setError(null), 5000);
+      return;
+    }
+
+    setGeneratingImage(true);
+    setError(null);
+
+    try {
+      // Generate image using OpenAI DALL-E
+      const result = await generateProductImage({
+        productName: formData.name,
+        category: formData.commodity_type,
+        description: formData.description || undefined,
+        style: "product", // Professional product photography style
+        size: "1024x1024",
+      });
+
+      // Upload the generated image URL to EPCC Files
+      const uploadResult = await createImageFile(result.imageUrl);
+
+      if (uploadResult?.data) {
+        const imageData = {
+          url: uploadResult.data.link.href,
+          alt: formData.name || "Generated product image",
+          fileId: uploadResult.data.id,
+        };
+
+        setMainImage(imageData);
+        setSuccess("Product image generated and uploaded successfully!");
+        setTimeout(() => setSuccess(null), 3000);
+      } else {
+        throw new Error("Failed to upload generated image");
+      }
+    } catch (err) {
+      console.error("Error generating image:", err);
+      const errorMessage =
+        err instanceof Error ? err.message : "Failed to generate image";
+      setError(`AI Image Generation Error: ${errorMessage}`);
+      setTimeout(() => setError(null), 5000);
+    } finally {
+      setGeneratingImage(false);
+    }
+  };
+
   return (
     <div>
       <div>
@@ -392,6 +441,77 @@ export const ProductForm: React.FC<ProductFormProps> = ({
                         ? "Enter a valid image URL to upload and associate with this product"
                         : "Enter a valid image URL to replace the current product image"}
                     </p>
+
+                    {/* AI Image Generation */}
+                    <div className="mt-4 pt-4 border-t border-blue-200">
+                      <div className="flex items-center justify-between mb-2">
+                        <h5 className="text-sm font-medium text-blue-900">
+                          AI Image Generation
+                        </h5>
+                        <button
+                          type="button"
+                          onClick={handleGenerateImage}
+                          disabled={generatingImage || !formData.name.trim()}
+                          className={`inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-md transition-colors duration-200 ${
+                            generatingImage || !formData.name.trim()
+                              ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                              : "bg-gradient-to-r from-pink-500 to-purple-600 text-white hover:from-pink-600 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500"
+                          }`}
+                        >
+                          {generatingImage ? (
+                            <>
+                              <svg
+                                className="animate-spin w-3 h-3 mr-1.5"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                              >
+                                <circle
+                                  className="opacity-25"
+                                  cx="12"
+                                  cy="12"
+                                  r="10"
+                                  stroke="currentColor"
+                                  strokeWidth="4"
+                                />
+                                <path
+                                  className="opacity-75"
+                                  fill="currentColor"
+                                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                                />
+                              </svg>
+                              Generating...
+                            </>
+                          ) : (
+                            <>
+                              <svg
+                                className="w-3 h-3 mr-1.5"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                                />
+                              </svg>
+                              AI Generate
+                            </>
+                          )}
+                        </button>
+                      </div>
+                      <p className="text-xs text-blue-600">
+                        Generate a professional product image using AI based on
+                        the product name and description
+                      </p>
+                      {!formData.name.trim() && (
+                        <p className="text-xs text-amber-600 mt-1">
+                          💡 Enter a product name first to enable AI image
+                          generation
+                        </p>
+                      )}
+                    </div>
                   </div>
                 )}
 
