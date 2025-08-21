@@ -5,6 +5,8 @@ import { useAuth } from "../../contexts/AuthContext";
 import { useEpccApi } from "../../hooks/useEpccApi";
 import { Catalog } from "@elasticpath/js-sdk";
 import { useDashboard } from "@/hooks";
+import { Toast } from "@/components";
+import { useToast } from "@/contexts/ToastContext";
 
 export default function CatalogsPage() {
   const { selectedOrgId, selectedStoreId } = useDashboard();
@@ -22,12 +24,11 @@ export default function CatalogsPage() {
   const [loadingReleases, setLoadingReleases] = useState<
     Record<string, boolean>
   >({});
-  const [error, setError] = useState<string | null>(null);
   const [publishingCatalogId, setPublishingCatalogId] = useState<string | null>(
     null
   );
-  const [publishSuccess, setPublishSuccess] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const { showToast } = useToast();
 
   useEffect(() => {
     if (selectedStoreId) {
@@ -49,7 +50,6 @@ export default function CatalogsPage() {
     try {
       setLoadingReleases((prev) => ({ ...prev, [catalogId]: true }));
       const response = await getCatalogReleases(catalogId);
-      console.log("releases", response);
 
       if (response?.data) {
         setCatalogReleases((prev) => ({ ...prev, [catalogId]: response.data }));
@@ -65,9 +65,7 @@ export default function CatalogsPage() {
   const loadCatalogs = async () => {
     try {
       setLoading(true);
-      setError(null);
       const response = await getAllCatalogs();
-      console.log("response", response);
 
       if (response?.data) {
         setCatalogs(response.data);
@@ -81,7 +79,7 @@ export default function CatalogsPage() {
       }
     } catch (err) {
       console.error("Failed to load catalogs:", err);
-      setError("Failed to load catalogs. Please try again.");
+      showToast("Failed to load catalogs. Please try again.", "error");
     } finally {
       setLoading(false);
     }
@@ -93,14 +91,14 @@ export default function CatalogsPage() {
   ) => {
     try {
       setPublishingCatalogId(catalogId);
-      setError(null);
-      setPublishSuccess(null);
 
       const response = await publishCatalog(catalogId);
 
       if (response?.data) {
-        setPublishSuccess(`Catalog "${catalogName}" published successfully!`);
-        setTimeout(() => setPublishSuccess(null), 5000);
+        showToast(
+          `Catalog "${catalogName}" published successfully!`,
+          "success"
+        );
 
         // Reload releases for this catalog to show the new release
         loadCatalogReleases(catalogId);
@@ -109,8 +107,10 @@ export default function CatalogsPage() {
       }
     } catch (err) {
       console.error("Failed to publish catalog:", err);
-      setError(`Failed to publish catalog "${catalogName}". Please try again.`);
-      setTimeout(() => setError(null), 5000);
+      showToast(
+        `Failed to publish catalog "${catalogName}". Please try again.`,
+        "error"
+      );
     } finally {
       setPublishingCatalogId(null);
     }
@@ -265,56 +265,6 @@ export default function CatalogsPage() {
                 </div>
               </div>
             </div>
-
-            {/* Success Message */}
-            {publishSuccess && (
-              <div className="mb-6 bg-green-50 border border-green-200 rounded-md p-4">
-                <div className="flex">
-                  <div className="flex-shrink-0">
-                    <svg
-                      className="h-5 w-5 text-green-400"
-                      fill="currentColor"
-                      viewBox="0 0 20 20"
-                    >
-                      <path
-                        fillRule="evenodd"
-                        d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                        clipRule="evenodd"
-                      />
-                    </svg>
-                  </div>
-                  <div className="ml-3">
-                    <p className="text-sm font-medium text-green-800">
-                      {publishSuccess}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Error Message */}
-            {error && (
-              <div className="mb-6 bg-red-50 border border-red-200 rounded-md p-4">
-                <div className="flex">
-                  <div className="flex-shrink-0">
-                    <svg
-                      className="h-5 w-5 text-red-400"
-                      fill="currentColor"
-                      viewBox="0 0 20 20"
-                    >
-                      <path
-                        fillRule="evenodd"
-                        d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
-                        clipRule="evenodd"
-                      />
-                    </svg>
-                  </div>
-                  <div className="ml-3">
-                    <p className="text-sm font-medium text-red-800">{error}</p>
-                  </div>
-                </div>
-              </div>
-            )}
 
             {/* Loading State */}
             {loading ? (

@@ -6,6 +6,7 @@ import { useEpccApi } from "../../hooks/useEpccApi";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useDashboard } from "../../hooks/useDashboard";
 import { Order } from "@elasticpath/js-sdk";
+import { useToast } from "@/contexts/ToastContext";
 
 // Type guard to ensure compatibility
 const isOrder = (obj: any): obj is Order => {
@@ -30,7 +31,6 @@ export default function OrdersPage() {
   const searchParams = useSearchParams();
   const [orders, setOrders] = useState<Order[]>([]);
   const [ordersLoading, setOrdersLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(0);
   const [paginationInfo, setPaginationInfo] = useState<PaginationInfo>({
@@ -39,6 +39,7 @@ export default function OrdersPage() {
     total_count: 0,
     per_page: 25,
   });
+  const { showToast } = useToast();
 
   // Use the same dashboard state management
   const { selectedOrgId, selectedStoreId, handleOrgSelect, handleStoreSelect } =
@@ -80,7 +81,6 @@ export default function OrdersPage() {
     if (!selectedStoreId) return;
 
     setOrdersLoading(true);
-    setError(null);
 
     try {
       const ordersData = await fetchOrders({
@@ -102,7 +102,7 @@ export default function OrdersPage() {
         });
       }
     } catch (err) {
-      setError("Failed to load orders");
+      showToast("Failed to load orders", "error");
       console.error("Error loading orders:", err);
     } finally {
       setOrdersLoading(false);
@@ -247,32 +247,6 @@ export default function OrdersPage() {
                   </div>
                 </div>
               </div>
-
-              {/* Error Message */}
-              {error && (
-                <div className="mb-6 bg-red-50 border-l-4 border-red-400 p-4 rounded-md">
-                  <div className="flex">
-                    <div className="flex-shrink-0">
-                      <svg
-                        className="h-5 w-5 text-red-400"
-                        viewBox="0 0 20 20"
-                        fill="currentColor"
-                      >
-                        <path
-                          fillRule="evenodd"
-                          d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
-                          clipRule="evenodd"
-                        />
-                      </svg>
-                    </div>
-                    <div className="ml-3">
-                      <p className="text-sm font-medium text-red-800">
-                        {error}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              )}
 
               {/* Orders List */}
               {ordersLoading ? (

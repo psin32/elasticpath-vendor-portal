@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { useEpccApi } from "../../hooks/useEpccApi";
+import { useToast } from "@/contexts/ToastContext";
 
 interface ProductInventoryProps {
   productId: string;
@@ -26,8 +27,7 @@ export const ProductInventory: React.FC<ProductInventoryProps> = ({
     ep_available: 0,
   });
   const [showNewInventoryForm, setShowNewInventoryForm] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
+  const { showToast } = useToast();
 
   const {
     fetchInventoryBySku,
@@ -54,7 +54,6 @@ export const ProductInventory: React.FC<ProductInventoryProps> = ({
 
     try {
       setInventoryLoading(true);
-      setError(null);
 
       const result = await fetchInventoryBySku(sku);
       if (result && result.data) {
@@ -64,8 +63,7 @@ export const ProductInventory: React.FC<ProductInventoryProps> = ({
       }
     } catch (err) {
       console.error("Error fetching inventory:", err);
-      setError("Failed to fetch inventory data");
-      setTimeout(() => setError(null), 3000);
+      showToast("Failed to fetch inventory data", "error");
     } finally {
       setInventoryLoading(false);
     }
@@ -96,7 +94,7 @@ export const ProductInventory: React.FC<ProductInventoryProps> = ({
         (inv) => inv.id === inventoryId
       );
       if (!currentInventory) {
-        setError("Inventory record not found");
+        showToast("Inventory record not found", "error");
         return;
       }
 
@@ -113,19 +111,18 @@ export const ProductInventory: React.FC<ProductInventoryProps> = ({
 
       const result = await updateInventory(currentInventory.ep_id, updatedData);
       if (result) {
-        setSuccess("Inventory quantity updated successfully!");
+        showToast("Inventory quantity updated successfully!", "success");
         setEditingInventory(null);
         setEditingQuantity(0);
         // Refresh inventory data
         if (productSku) {
           fetchInventory(productSku);
         }
-        setTimeout(() => setSuccess(null), 3000);
       } else {
-        setError("Failed to update inventory quantity");
+        showToast("Failed to update inventory quantity", "error");
       }
     } catch (err) {
-      setError("Failed to update inventory quantity");
+      showToast("Failed to update inventory quantity", "error");
       console.error("Error updating inventory quantity:", err);
     }
   };
@@ -151,7 +148,7 @@ export const ProductInventory: React.FC<ProductInventoryProps> = ({
 
       const result = await createInventory(inventoryData);
       if (result) {
-        setSuccess("Inventory record created successfully!");
+        showToast("Inventory record created successfully!", "success");
         setShowNewInventoryForm(false);
         setNewInventory({
           ep_available_date: "",
@@ -162,12 +159,11 @@ export const ProductInventory: React.FC<ProductInventoryProps> = ({
         if (productSku) {
           fetchInventory(productSku);
         }
-        setTimeout(() => setSuccess(null), 3000);
       } else {
-        setError("Failed to create inventory record");
+        showToast("Failed to create inventory record", "error");
       }
     } catch (err) {
-      setError("Failed to create inventory record");
+      showToast("Failed to create inventory record", "error");
       console.error("Error creating inventory:", err);
     }
   };
@@ -178,23 +174,22 @@ export const ProductInventory: React.FC<ProductInventoryProps> = ({
         (inv) => inv.id === inventoryId
       );
       if (!currentInventory) {
-        setError("Inventory record not found");
+        showToast("Inventory record not found", "error");
         return;
       }
 
       const result = await deleteInventory(currentInventory.ep_id);
       if (result) {
-        setSuccess("Inventory record deleted successfully!");
+        showToast("Inventory record deleted successfully!", "success");
         // Refresh inventory data
         if (productSku) {
           fetchInventory(productSku);
         }
-        setTimeout(() => setSuccess(null), 3000);
       } else {
-        setError("Failed to delete inventory record");
+        showToast("Failed to delete inventory record", "error");
       }
     } catch (err) {
-      setError("Failed to delete inventory record");
+      showToast("Failed to delete inventory record", "error");
       console.error("Error deleting inventory:", err);
     }
   };
@@ -202,53 +197,6 @@ export const ProductInventory: React.FC<ProductInventoryProps> = ({
   return (
     <div className="space-y-6">
       <h2 className="text-xl font-bold text-gray-900">Inventory Records</h2>
-
-      {/* Alert Messages */}
-      {error && (
-        <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
-          <div className="flex">
-            <div className="flex-shrink-0">
-              <svg
-                className="h-5 w-5 text-red-400"
-                viewBox="0 0 20 20"
-                fill="currentColor"
-              >
-                <path
-                  fillRule="evenodd"
-                  d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
-                  clipRule="evenodd"
-                />
-              </svg>
-            </div>
-            <div className="ml-3">
-              <p className="text-sm text-red-800">{error}</p>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {success && (
-        <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg">
-          <div className="flex">
-            <div className="flex-shrink-0">
-              <svg
-                className="h-5 w-5 text-green-400"
-                viewBox="0 0 20 20"
-                fill="currentColor"
-              >
-                <path
-                  fillRule="evenodd"
-                  d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                  clipRule="evenodd"
-                />
-              </svg>
-            </div>
-            <div className="ml-3">
-              <p className="text-sm text-green-800">{success}</p>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Add New Inventory Button */}
       <div className="flex justify-end mb-4">

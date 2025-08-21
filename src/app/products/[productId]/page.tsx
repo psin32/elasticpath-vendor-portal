@@ -11,6 +11,7 @@ import { ProductForm } from "../../../components/products/ProductForm";
 import { ProductPricing } from "../../../components/products/ProductPricing";
 import { ProductCategories } from "../../../components/products/ProductCategories";
 import { PcmProduct, PcmProductResponse } from "@elasticpath/js-sdk";
+import { useToast } from "@/contexts/ToastContext";
 
 export default function ProductEditPage() {
   const router = useRouter();
@@ -19,8 +20,7 @@ export default function ProductEditPage() {
 
   const [product, setProduct] = useState<PcmProductResponse | null>(null);
   const [productLoading, setProductLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
+  const { showToast } = useToast();
 
   const [activeTab, setActiveTab] = useState<
     "details" | "attributes" | "inventory" | "pricing" | "categories"
@@ -36,19 +36,18 @@ export default function ProductEditPage() {
   );
 
   const handleEditSuccess = (updatedProduct: PcmProduct) => {
-    setSuccess("Product updated successfully!");
+    showToast("Product updated successfully!", "success");
     // Refresh the product data
     if (productId) {
       const loadProduct = async () => {
         try {
           setProductLoading(true);
-          setError(null);
           const productsData = await fetchProduct(productId);
           if (productsData) {
             setProduct(productsData);
           }
         } catch (err) {
-          setError("Failed to reload product");
+          showToast("Failed to reload product", "error");
           console.error("Error reloading product:", err);
         } finally {
           setProductLoading(false);
@@ -56,20 +55,17 @@ export default function ProductEditPage() {
       };
       loadProduct();
     }
-    setTimeout(() => setSuccess(null), 3000);
   };
 
   const handleEditCancel = () => {
     // For edit mode, cancel just clears any success/error messages
-    setSuccess(null);
-    setError(null);
+    showToast("Product edit cancelled", "info");
   };
 
   useEffect(() => {
     const loadProduct = async () => {
       try {
         setProductLoading(true);
-        setError(null);
         const productsData = await fetchProduct(productId);
         const foundProduct = productsData?.data;
 
@@ -77,7 +73,7 @@ export default function ProductEditPage() {
           setProduct(productsData);
         }
       } catch (err) {
-        setError("Failed to load product");
+        showToast("Failed to load product", "error");
         console.error("Error loading product:", err);
       } finally {
         setProductLoading(false);
@@ -123,7 +119,7 @@ export default function ProductEditPage() {
     );
   }
 
-  if (error && !product) {
+  if (!product) {
     return (
       <div className="p-6 bg-white">
         <div className="w-full">
@@ -146,7 +142,7 @@ export default function ProductEditPage() {
             <h3 className="text-lg font-medium text-gray-900 mb-2">
               Error Loading Product
             </h3>
-            <p className="text-gray-600 mb-6">{error}</p>
+            <p className="text-gray-600 mb-6">Failed to load product</p>
             <button
               onClick={() => router.push("/products")}
               className="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors duration-200"
@@ -170,10 +166,6 @@ export default function ProductEditPage() {
         </div>
       </div>
     );
-  }
-
-  if (!product) {
-    return null;
   }
 
   return (
@@ -201,49 +193,6 @@ export default function ProductEditPage() {
             Back to Products
           </button>
         </div>
-        {/* Success Message */}
-        {success && (
-          <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg">
-            <div className="flex items-center">
-              <svg
-                className="h-5 w-5 text-green-400 mr-2"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M5 13l4 4L19 7"
-                />
-              </svg>
-              <span className="text-green-800 font-medium">{success}</span>
-            </div>
-          </div>
-        )}
-
-        {/* Error Message */}
-        {error && (
-          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
-            <div className="flex items-center">
-              <svg
-                className="h-5 w-5 text-red-400 mr-2"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"
-                />
-              </svg>
-              <span className="text-red-800 font-medium">{error}</span>
-            </div>
-          </div>
-        )}
 
         {product && (
           <div className="bg-white border border-gray-200 rounded-xl shadow-sm">

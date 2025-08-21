@@ -6,6 +6,7 @@ import { ImageOverlay } from "../ui/ImageOverlay";
 import { PcmProduct, PcmProductResponse } from "@elasticpath/js-sdk";
 import { generateProductDescription } from "../../utils/descriptionGenerator";
 import { generateProductImage } from "../../utils/imageGenerator";
+import { useToast } from "@/contexts/ToastContext";
 
 interface ProductFormProps {
   mode: "create" | "edit";
@@ -47,10 +48,9 @@ export const ProductForm: React.FC<ProductFormProps> = ({
   const [imageUrl, setImageUrl] = useState("");
   const [uploadingImage, setUploadingImage] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
   const [generatingDescription, setGeneratingDescription] = useState(false);
   const [generatingImage, setGeneratingImage] = useState(false);
+  const { showToast } = useToast();
 
   const {
     createProduct,
@@ -101,8 +101,6 @@ export const ProductForm: React.FC<ProductFormProps> = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setError(null);
-    setSuccess(null);
 
     try {
       const productData: any = {
@@ -134,31 +132,33 @@ export const ProductForm: React.FC<ProductFormProps> = ({
               currentProductId,
               mainImage.fileId
             );
-            setSuccess("Product image relationship created successfully!");
+            showToast(
+              "Product image relationship created successfully!",
+              "success"
+            );
           } catch (err) {
             console.error("Error creating product image relationship:", err);
-            setError("Product saved but failed to create image relationship.");
-            setTimeout(() => setError(null), 5000);
+            showToast(
+              "Product saved but failed to create image relationship.",
+              "error"
+            );
           }
         } else {
-          setSuccess(
+          showToast(
             mode === "create"
               ? "Product created successfully!"
-              : "Product updated successfully!"
+              : "Product updated successfully!",
+            "success"
           );
         }
 
         if (onSuccess) {
           onSuccess(result.data);
         }
-
-        // Auto-hide success message
-        setTimeout(() => setSuccess(null), 3000);
       }
     } catch (err) {
       console.error("Error saving product:", err);
-      setError("Failed to save product. Please try again.");
-      setTimeout(() => setError(null), 5000);
+      showToast("Failed to save product. Please try again.", "error");
     } finally {
       setLoading(false);
     }
@@ -166,12 +166,11 @@ export const ProductForm: React.FC<ProductFormProps> = ({
 
   const handleImageUpload = async () => {
     if (!imageUrl.trim()) {
-      setError("Please enter an image URL");
+      showToast("Please enter an image URL", "error");
       return;
     }
 
     setUploadingImage(true);
-    setError(null);
 
     try {
       // Create the image file
@@ -199,13 +198,11 @@ export const ProductForm: React.FC<ProductFormProps> = ({
         });
 
         setImageUrl("");
-        setSuccess("Image uploaded successfully!");
-        setTimeout(() => setSuccess(null), 3000);
+        showToast("Image uploaded successfully!", "success");
       }
     } catch (err) {
       console.error("Error uploading image:", err);
-      setError("Failed to upload image. Please try again.");
-      setTimeout(() => setError(null), 5000);
+      showToast("Failed to upload image. Please try again.", "error");
     } finally {
       setUploadingImage(false);
     }
@@ -224,13 +221,11 @@ export const ProductForm: React.FC<ProductFormProps> = ({
 
   const handleGenerateDescription = async () => {
     if (!formData.name.trim()) {
-      setError("Product name is required to generate description");
-      setTimeout(() => setError(null), 5000);
+      showToast("Product name is required to generate description", "error");
       return;
     }
 
     setGeneratingDescription(true);
-    setError(null);
 
     try {
       const description = await generateProductDescription({
@@ -244,14 +239,12 @@ export const ProductForm: React.FC<ProductFormProps> = ({
         description: description,
       }));
 
-      setSuccess("Description generated successfully!");
-      setTimeout(() => setSuccess(null), 3000);
+      showToast("Description generated successfully!", "success");
     } catch (err) {
       console.error("Error generating description:", err);
       const errorMessage =
         err instanceof Error ? err.message : "Failed to generate description";
-      setError(`AI Description Generation Error: ${errorMessage}`);
-      setTimeout(() => setError(null), 5000);
+      showToast(`AI Description Generation Error: ${errorMessage}`, "error");
     } finally {
       setGeneratingDescription(false);
     }
@@ -259,13 +252,11 @@ export const ProductForm: React.FC<ProductFormProps> = ({
 
   const handleGenerateImage = async () => {
     if (!formData.name.trim()) {
-      setError("Product name is required to generate image");
-      setTimeout(() => setError(null), 5000);
+      showToast("Product name is required to generate image", "error");
       return;
     }
 
     setGeneratingImage(true);
-    setError(null);
 
     try {
       // Generate image using OpenAI DALL-E
@@ -288,8 +279,10 @@ export const ProductForm: React.FC<ProductFormProps> = ({
         };
 
         setMainImage(imageData);
-        setSuccess("Product image generated and uploaded successfully!");
-        setTimeout(() => setSuccess(null), 3000);
+        showToast(
+          "Product image generated and uploaded successfully!",
+          "success"
+        );
       } else {
         throw new Error("Failed to upload generated image");
       }
@@ -297,8 +290,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({
       console.error("Error generating image:", err);
       const errorMessage =
         err instanceof Error ? err.message : "Failed to generate image";
-      setError(`AI Image Generation Error: ${errorMessage}`);
-      setTimeout(() => setError(null), 5000);
+      showToast(`AI Image Generation Error: ${errorMessage}`, "error");
     } finally {
       setGeneratingImage(false);
     }
@@ -309,52 +301,6 @@ export const ProductForm: React.FC<ProductFormProps> = ({
       <div>
         {/* Form */}
         <form id="product-form" onSubmit={handleSubmit} className="px-8 py-6">
-          {error && (
-            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
-              <div className="flex">
-                <div className="flex-shrink-0">
-                  <svg
-                    className="h-5 w-5 text-red-400"
-                    viewBox="0 0 20 20"
-                    fill="currentColor"
-                  >
-                    <path
-                      fillRule="evenodd"
-                      d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
-                      clipRule="evenodd"
-                    />
-                  </svg>
-                </div>
-                <div className="ml-3">
-                  <p className="text-sm text-red-800">{error}</p>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {success && (
-            <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg">
-              <div className="flex">
-                <div className="flex-shrink-0">
-                  <svg
-                    className="h-5 w-5 text-green-400"
-                    viewBox="0 0 20 20"
-                    fill="currentColor"
-                  >
-                    <path
-                      fillRule="evenodd"
-                      d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                      clipRule="evenodd"
-                    />
-                  </svg>
-                </div>
-                <div className="ml-3">
-                  <p className="text-sm text-green-800">{success}</p>
-                </div>
-              </div>
-            </div>
-          )}
-
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <div className="lg:col-span-1">
               <div className="bg-gray-50 rounded-xl p-6 border border-gray-200">

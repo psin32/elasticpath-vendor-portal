@@ -1127,6 +1127,27 @@ export const useEpccApi = (orgId?: string, storeId?: string) => {
     [apiCall]
   );
 
+  /**
+   * Fetch all custom APIs
+   */
+  const fetchAllCustomApis = useCallback(async () => {
+    return apiCall(async (client) => {
+      return await client.CustomApis.All();
+    }, "Failed to fetch all custom APIs");
+  }, [apiCall]);
+
+  /**
+   * Fetch all custom fields
+   */
+  const fetchAllCustomFields = useCallback(
+    async (customApiId: string) => {
+      return apiCall(async (client) => {
+        return await client.CustomApis.GetFields(customApiId);
+      }, "Failed to fetch all custom fields");
+    },
+    [apiCall]
+  );
+
   // Reset API error when client changes
   useEffect(() => {
     if (isReady) {
@@ -1200,6 +1221,8 @@ export const useEpccApi = (orgId?: string, storeId?: string) => {
     createOrderFulfillmentAPI,
     fulfilOrder,
     cancelOrder,
+    fetchAllCustomApis,
+    fetchAllCustomFields,
 
     // Utility methods
     clearApiError: () => setApiError(null),

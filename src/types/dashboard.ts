@@ -6,6 +6,7 @@ export type DashboardSection =
   | "catalogs"
   | "accounts"
   | "inventory"
+  | "upload"
   | "bulk-upload"
   | "templates"
   | "api-demo";

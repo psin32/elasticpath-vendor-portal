@@ -19,6 +19,7 @@ import {
 } from "../../../utils/clientPackingSlipGenerator";
 import { generateAndDownloadShippingLabel } from "../../../utils/clientShippingLabelGenerator";
 import { type ShippingLabelData } from "../../../templates/shippingLabelTemplate";
+import { useToast } from "@/contexts/ToastContext";
 
 interface OrderDetailsPageProps {
   params: {
@@ -46,7 +47,6 @@ export default function OrderDetailsPage({ params }: OrderDetailsPageProps) {
   const [shippingGroups, setShippingGroups] = useState<any[]>([]);
   const [fulfillments, setFulfillments] = useState<any[]>([]);
   const [orderLoading, setOrderLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [showFulfillmentOverlay, setShowFulfillmentOverlay] = useState(false);
   const [generatingPackingSlip, setGeneratingPackingSlip] = useState<
     string | null
@@ -57,6 +57,7 @@ export default function OrderDetailsPage({ params }: OrderDetailsPageProps) {
   const [activeTab, setActiveTab] = useState<"details" | "fulfillment">(
     "details"
   );
+  const { showToast } = useToast();
 
   // Group items by shipping group
   const itemsByShippingGroup = useMemo(() => {
@@ -151,7 +152,6 @@ export default function OrderDetailsPage({ params }: OrderDetailsPageProps) {
     if (!selectedStoreId || !orderId) return;
 
     setOrderLoading(true);
-    setError(null);
 
     try {
       // Fetch order details
@@ -193,7 +193,7 @@ export default function OrderDetailsPage({ params }: OrderDetailsPageProps) {
         }
       }
     } catch (err) {
-      setError("Failed to load order details");
+      showToast("Failed to load order details", "error");
       console.error("Error loading order:", err);
     } finally {
       setOrderLoading(false);
@@ -382,32 +382,6 @@ export default function OrderDetailsPage({ params }: OrderDetailsPageProps) {
                   Back to Orders
                 </button>
               </div>
-
-              {/* Error Message */}
-              {error && (
-                <div className="mb-6 bg-red-50 border-l-4 border-red-400 p-4 rounded-md">
-                  <div className="flex">
-                    <div className="flex-shrink-0">
-                      <svg
-                        className="h-5 w-5 text-red-400"
-                        viewBox="0 0 20 20"
-                        fill="currentColor"
-                      >
-                        <path
-                          fillRule="evenodd"
-                          d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
-                          clipRule="evenodd"
-                        />
-                      </svg>
-                    </div>
-                    <div className="ml-3">
-                      <p className="text-sm font-medium text-red-800">
-                        {error}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              )}
 
               {/* Loading State */}
               {orderLoading ? (
