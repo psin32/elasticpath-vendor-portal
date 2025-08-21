@@ -35,7 +35,7 @@ export const SidebarNavigation: React.FC<SidebarNavigationProps> = ({
     } else if (pathname.startsWith("/upload/bulk")) {
       return "bulk-upload";
     } else if (pathname.startsWith("/upload/mapping")) {
-      return "templates";
+      return "mappings";
     }
     return activeSection; // fallback to prop if no URL match
   };
@@ -149,8 +149,8 @@ export const SidebarNavigation: React.FC<SidebarNavigationProps> = ({
           route: "/upload/bulk",
         },
         {
-          id: "templates" as const,
-          label: "Templates",
+          id: "mappings" as const,
+          label: "Mappings",
           enabled: true,
           route: "/upload/mapping",
         },

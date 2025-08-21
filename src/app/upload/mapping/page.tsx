@@ -1,109 +1,106 @@
 "use client";
 
 import React, { useState } from "react";
-import { Template, TemplateDataset } from "@/types/template";
-import { useTemplateManager } from "@/hooks/useTemplateManager";
+import { Mapping, MappingDataset } from "@/types/mapping";
+import { useMappingManager } from "@/hooks/useMappingManager";
 import { useToast } from "@/contexts/ToastContext";
-import TemplateBuilder from "@/components/template/TemplateBuilder";
-import DataGrid from "@/components/template/DataGrid";
-import { sampleTemplates } from "@/utils/sampleTemplates";
+import MappingBuilder from "@/components/mapping/MappingBuilder";
+import MappingDataGrid from "@/components/mapping/MappingDataGrid";
+import { sampleMappings } from "@/utils/sampleMappings";
 
-type ViewMode = "templates" | "builder" | "data-entry";
+type ViewMode = "mappings" | "builder" | "data-entry";
 
-const TemplatesPage: React.FC = () => {
+const MappingPage: React.FC = () => {
   const {
-    templates,
+    mappings,
     datasets,
-    createTemplate,
-    updateTemplate,
-    deleteTemplate,
+    createMapping,
+    updateMapping,
+    deleteMapping,
     createDataset,
     updateDataset,
     deleteDataset,
     validateRow,
     exportDatasetToCSV,
     exportDatasetToJSON,
-  } = useTemplateManager();
+  } = useMappingManager();
 
   const { showToast } = useToast();
 
-  const [viewMode, setViewMode] = useState<ViewMode>("templates");
-  const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(
+  const [viewMode, setViewMode] = useState<ViewMode>("mappings");
+  const [selectedMapping, setSelectedMapping] = useState<Mapping | null>(null);
+  const [selectedDataset, setSelectedDataset] = useState<MappingDataset | null>(
     null
   );
-  const [selectedDataset, setSelectedDataset] =
-    useState<TemplateDataset | null>(null);
-  const [editingTemplate, setEditingTemplate] = useState<Template | undefined>(
+  const [editingMapping, setEditingMapping] = useState<Mapping | undefined>(
     undefined
   );
 
-  const handleCreateTemplate = () => {
-    setEditingTemplate(undefined);
+  const handleCreateMapping = () => {
+    setEditingMapping(undefined);
     setViewMode("builder");
   };
 
-  const handleLoadSampleTemplates = () => {
-    if (
-      confirm("This will add sample templates to your workspace. Continue?")
-    ) {
-      sampleTemplates.forEach((templateData) => {
-        createTemplate(templateData);
+  const handleLoadSampleMappings = () => {
+    if (confirm("This will add sample mappings to your workspace. Continue?")) {
+      sampleMappings.forEach((mappingData) => {
+        createMapping(mappingData);
       });
-      showToast(`Added ${sampleTemplates.length} sample templates`, "success");
+      showToast(`Added ${sampleMappings.length} sample mappings`, "success");
     }
   };
 
-  const handleEditTemplate = (template: Template) => {
-    setEditingTemplate(template);
+  const handleEditMapping = (mapping: Mapping) => {
+    setEditingMapping(mapping);
     setViewMode("builder");
   };
 
-  const handleSaveTemplate = (
-    templateData: Omit<Template, "id" | "createdAt" | "updatedAt">
+  const handleSaveMapping = (
+    mappingData: Omit<Mapping, "id" | "createdAt" | "updatedAt">
   ) => {
-    if (editingTemplate) {
-      updateTemplate(editingTemplate.id, templateData);
-      showToast("Template updated successfully", "success");
+    if (editingMapping) {
+      updateMapping(editingMapping.id, mappingData);
+      showToast("Mapping updated successfully", "success");
     } else {
-      createTemplate(templateData);
-      showToast("Template created successfully", "success");
+      createMapping(mappingData);
+      showToast("Mapping created successfully", "success");
     }
-    setViewMode("templates");
-    setEditingTemplate(undefined);
+    setViewMode("mappings");
+    setEditingMapping(undefined);
   };
 
-  const handleDeleteTemplate = (template: Template) => {
+  const handleDeleteMapping = (mapping: Mapping) => {
     if (
       confirm(
-        `Are you sure you want to delete "${template.name}"? This will also delete all associated datasets.`
+        `Are you sure you want to delete "${mapping.name}"? This will also delete all associated datasets.`
       )
     ) {
-      deleteTemplate(template.id);
-      showToast("Template deleted successfully", "success");
+      deleteMapping(mapping.id);
+      showToast("Mapping deleted successfully", "success");
     }
   };
 
-  const handleCreateDataset = (template: Template) => {
+  const handleCreateDataset = (mapping: Mapping) => {
     const dataset = createDataset({
-      templateId: template.id,
-      name: `${template.name} Data - ${new Date().toLocaleDateString()}`,
+      mappingId: mapping.id,
+      name: `${mapping.name} Data - ${new Date().toLocaleDateString()}`,
       rows: [],
     });
-    setSelectedTemplate(template);
+    setSelectedMapping(mapping);
     setSelectedDataset(dataset);
     setViewMode("data-entry");
   };
 
-  const handleOpenDataset = (dataset: TemplateDataset) => {
-    const template = templates.find((t) => t.id === dataset.templateId);
-    if (template) {
-      setSelectedTemplate(template);
+  const handleOpenDataset = (dataset: MappingDataset) => {
+    const mapping = mappings.find((m) => m.id === dataset.mappingId);
+    if (mapping) {
+      setSelectedMapping(mapping);
       setSelectedDataset(dataset);
       setViewMode("data-entry");
     }
   };
 
-  const handleDeleteDataset = (dataset: TemplateDataset) => {
+  const handleDeleteDataset = (dataset: MappingDataset) => {
     if (confirm(`Are you sure you want to delete "${dataset.name}"?`)) {
       deleteDataset(dataset.id);
       showToast("Dataset deleted successfully", "success");
@@ -120,58 +117,58 @@ const TemplatesPage: React.FC = () => {
     }
   };
 
-  const renderTemplatesView = () => (
+  const renderMappingsView = () => (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Template Mapping</h1>
+          <h1 className="text-2xl font-bold text-gray-900">Mapping</h1>
           <p className="text-gray-600">
             Create and manage data templates with field mapping for bulk
             operations
           </p>
         </div>
         <div className="flex space-x-3">
-          {templates.length === 0 && (
+          {mappings.length === 0 && (
             <button
-              onClick={handleLoadSampleTemplates}
+              onClick={handleLoadSampleMappings}
               className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
             >
-              Load Sample Templates
+              Load Sample Mappings
             </button>
           )}
           <button
-            onClick={handleCreateTemplate}
+            onClick={handleCreateMapping}
             className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
           >
-            Create Template
+            Create Mapping
           </button>
         </div>
       </div>
 
       {/* Templates Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {templates.map((template) => {
-          const templateDatasets = datasets.filter(
-            (d) => d.templateId === template.id
+        {mappings.map((mapping) => {
+          const mappingDatasets = datasets.filter(
+            (d) => d.mappingId === mapping.id
           );
           return (
             <div
-              key={template.id}
+              key={mapping.id}
               className="bg-white rounded-lg border border-gray-200 p-6 hover:shadow-md transition-shadow"
             >
               <div className="flex justify-between items-start mb-4">
                 <div>
                   <h3 className="text-lg font-medium text-gray-900">
-                    {template.name}
+                    {mapping.name}
                   </h3>
-                  <p className="text-sm text-gray-500">{template.entityType}</p>
+                  <p className="text-sm text-gray-500">{mapping.entityType}</p>
                 </div>
                 <div className="flex space-x-1">
                   <button
-                    onClick={() => handleEditTemplate(template)}
+                    onClick={() => handleEditMapping(mapping)}
                     className="p-1 text-gray-400 hover:text-gray-600"
-                    title="Edit Template"
+                    title="Edit Mapping"
                   >
                     <svg
                       className="w-4 h-4"
@@ -188,9 +185,9 @@ const TemplatesPage: React.FC = () => {
                     </svg>
                   </button>
                   <button
-                    onClick={() => handleDeleteTemplate(template)}
+                    onClick={() => handleDeleteMapping(mapping)}
                     className="p-1 text-gray-400 hover:text-red-600"
-                    title="Delete Template"
+                    title="Delete Mapping"
                   >
                     <svg
                       className="w-4 h-4"
@@ -209,20 +206,20 @@ const TemplatesPage: React.FC = () => {
                 </div>
               </div>
 
-              {template.description && (
+              {mapping.description && (
                 <p className="text-sm text-gray-600 mb-4">
-                  {template.description}
+                  {mapping.description}
                 </p>
               )}
 
               <div className="space-y-3">
                 <div className="text-sm text-gray-500">
-                  <span className="font-medium">{template.fields.length}</span>{" "}
+                  <span className="font-medium">{mapping.fields.length}</span>{" "}
                   fields
                 </div>
 
                 <div className="flex flex-wrap gap-1">
-                  {template.fields.slice(0, 3).map((field) => (
+                  {mapping.fields.slice(0, 3).map((field) => (
                     <span
                       key={field.id}
                       className="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded"
@@ -230,24 +227,24 @@ const TemplatesPage: React.FC = () => {
                       {field.label}
                     </span>
                   ))}
-                  {template.fields.length > 3 && (
+                  {mapping.fields.length > 3 && (
                     <span className="text-xs text-gray-500">
-                      +{template.fields.length - 3} more
+                      +{mapping.fields.length - 3} more
                     </span>
                   )}
                 </div>
 
                 <div className="pt-4 border-t border-gray-200">
                   <button
-                    onClick={() => handleCreateDataset(template)}
+                    onClick={() => handleCreateDataset(mapping)}
                     className="w-full px-3 py-2 bg-indigo-600 text-white text-sm rounded hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   >
                     Create Dataset
                   </button>
 
-                  {templateDatasets.length > 0 && (
+                  {mappingDatasets.length > 0 && (
                     <div className="mt-2 text-xs text-gray-500">
-                      {templateDatasets.length} existing dataset(s)
+                      {mappingDatasets.length} existing dataset(s)
                     </div>
                   )}
                 </div>
@@ -256,7 +253,7 @@ const TemplatesPage: React.FC = () => {
           );
         })}
 
-        {templates.length === 0 && (
+        {mappings.length === 0 && (
           <div className="col-span-full text-center py-12">
             <svg
               className="mx-auto h-12 w-12 text-gray-400 mb-4"
@@ -272,24 +269,24 @@ const TemplatesPage: React.FC = () => {
               />
             </svg>
             <h3 className="text-lg font-medium text-gray-900 mb-2">
-              No template mappings yet
+              No mapping mappings yet
             </h3>
             <p className="text-gray-600 mb-4">
-              Create your first template mapping to get started with structured
+              Create your first mapping mapping to get started with structured
               data entry and field mapping.
             </p>
             <div className="flex space-x-3">
               <button
-                onClick={handleLoadSampleTemplates}
+                onClick={handleLoadSampleMappings}
                 className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
               >
-                Load Sample Templates
+                Load Sample Mappings
               </button>
               <button
-                onClick={handleCreateTemplate}
+                onClick={handleCreateMapping}
                 className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
               >
-                Create Template
+                Create Mapping
               </button>
             </div>
           </div>
@@ -311,7 +308,7 @@ const TemplatesPage: React.FC = () => {
                       Dataset Name
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Template
+                      Mapping
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Rows
@@ -326,8 +323,8 @@ const TemplatesPage: React.FC = () => {
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
                   {datasets.map((dataset) => {
-                    const template = templates.find(
-                      (t) => t.id === dataset.templateId
+                    const mapping = mappings.find(
+                      (m) => m.id === dataset.mappingId
                     );
                     return (
                       <tr key={dataset.id} className="hover:bg-gray-50">
@@ -338,7 +335,7 @@ const TemplatesPage: React.FC = () => {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="text-sm text-gray-900">
-                            {template?.name || "Unknown"}
+                            {mapping?.name || "Unknown"}
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
@@ -395,7 +392,7 @@ const TemplatesPage: React.FC = () => {
     <div>
       <div className="mb-6">
         <button
-          onClick={() => setViewMode("templates")}
+          onClick={() => setViewMode("mappings")}
           className="flex items-center text-indigo-600 hover:text-indigo-800"
         >
           <svg
@@ -411,26 +408,26 @@ const TemplatesPage: React.FC = () => {
               d="M15 19l-7-7 7-7"
             />
           </svg>
-          Back to Template Mapping
+          Back to Mapping
         </button>
       </div>
 
-      <TemplateBuilder
-        template={editingTemplate}
-        onSave={handleSaveTemplate}
-        onCancel={() => setViewMode("templates")}
+      <MappingBuilder
+        mapping={editingMapping}
+        onSave={handleSaveMapping}
+        onCancel={() => setViewMode("mappings")}
       />
     </div>
   );
 
   const renderDataEntryView = () => {
-    if (!selectedTemplate || !selectedDataset) return null;
+    if (!selectedMapping || !selectedDataset) return null;
 
     return (
       <div>
         <div className="mb-6 flex justify-between items-center">
           <button
-            onClick={() => setViewMode("templates")}
+            onClick={() => setViewMode("mappings")}
             className="flex items-center text-indigo-600 hover:text-indigo-800"
           >
             <svg
@@ -446,7 +443,7 @@ const TemplatesPage: React.FC = () => {
                 d="M15 19l-7-7 7-7"
               />
             </svg>
-            Back to Template Mapping
+            Back to Mapping
           </button>
 
           <div className="flex space-x-2">
@@ -465,8 +462,8 @@ const TemplatesPage: React.FC = () => {
           </div>
         </div>
 
-        <DataGrid
-          template={selectedTemplate}
+        <MappingDataGrid
+          mapping={selectedMapping}
           data={selectedDataset.rows}
           onDataChange={handleDatasetDataChange}
           onValidate={validateRow}
@@ -478,7 +475,7 @@ const TemplatesPage: React.FC = () => {
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {viewMode === "templates" && renderTemplatesView()}
+        {viewMode === "mappings" && renderMappingsView()}
         {viewMode === "builder" && renderBuilderView()}
         {viewMode === "data-entry" && renderDataEntryView()}
       </div>
@@ -486,4 +483,4 @@ const TemplatesPage: React.FC = () => {
   );
 };
 
-export default TemplatesPage;
+export default MappingPage;

@@ -28,7 +28,7 @@ export interface SelectOption {
   label: string;
 }
 
-export interface TemplateField {
+export interface MappingField {
   id: string;
   name: string;
   label: string;
@@ -41,19 +41,19 @@ export interface TemplateField {
   order: number;
 }
 
-export interface Template {
+export interface Mapping {
   id: string;
   name: string;
   description?: string;
-  fields: TemplateField[];
+  fields: MappingField[];
   entityType: "products" | "orders" | "customers" | "custom";
   createdAt: Date;
   updatedAt: Date;
 }
 
-export interface TemplateData {
+export interface MappingData {
   id: string;
-  templateId: string;
+  mappingId: string;
   data: Record<string, any>;
   errors?: Record<string, string[]>;
   isValid: boolean;
@@ -65,11 +65,11 @@ export interface ValidationError {
   errors: string[];
 }
 
-export interface TemplateDataset {
+export interface MappingDataset {
   id: string;
-  templateId: string;
+  mappingId: string;
   name: string;
-  rows: TemplateData[];
+  rows: MappingData[];
   createdAt: Date;
   updatedAt: Date;
 }
