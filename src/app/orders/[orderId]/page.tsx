@@ -11,6 +11,7 @@ import { Order, OrderItem } from "@elasticpath/js-sdk";
 import { OrderItemPromotions } from "../../../components/orders/OrderItemPromotions";
 import FulfillmentOverlay from "../../../components/orders/FulfillmentOverlay";
 import OrderFulfillmentTab from "../../../components/orders/OrderFulfillmentTab";
+import AdditionalInfoAccordion from "../../../components/orders/AdditionalInfoAccordion";
 import {
   generateAndDownloadPackingSlip,
   type PackingSlipData,
@@ -779,6 +780,13 @@ export default function OrderDetailsPage({ params }: OrderDetailsPageProps) {
                                               )}
                                             </div>
                                           </div>
+                                          {/* Additional Information */}
+                                          <AdditionalInfoAccordion
+                                            additionalInfo={
+                                              item?.custom_inputs
+                                                ?.additional_information || []
+                                            }
+                                          />
                                         </div>
                                       ))}
                                     </div>
