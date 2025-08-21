@@ -3,6 +3,7 @@ export type DashboardSection =
   | "stores"
   | "products"
   | "orders"
+  | "catalogs"
   | "accounts"
   | "inventory"
   | "bulk-upload"

@@ -91,19 +91,7 @@ export default function OrderDetailsPage({ params }: OrderDetailsPageProps) {
   }, [orderItems, fulfillments]);
 
   // Use the same dashboard state management
-  const {
-    orgSearchTerm,
-    storeSearchTerm,
-    selectedOrgId,
-    selectedStoreId,
-    storeFilterMode,
-    organizationStores,
-    storesLoading,
-    handleOrgSelect,
-    handleStoreSelect,
-    setOrgSearchTerm,
-    setStoreSearchTerm,
-  } = useDashboard();
+  const { selectedOrgId, selectedStoreId } = useDashboard();
 
   const {
     fetchOrder,

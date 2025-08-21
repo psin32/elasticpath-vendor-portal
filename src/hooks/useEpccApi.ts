@@ -1094,6 +1094,39 @@ export const useEpccApi = (orgId?: string, storeId?: string) => {
     }, "Failed to fetch currencies");
   }, [apiCall]);
 
+  /**
+   * Fetch all catalogs
+   */
+  const getAllCatalogs = useCallback(async () => {
+    return apiCall(async (client) => {
+      return await client.Catalogs.All();
+    }, "Failed to fetch catalogs");
+  }, [apiCall]);
+
+  /**
+   * Publish catalog
+   */
+  const publishCatalog = useCallback(
+    async (catalogId: string) => {
+      return apiCall(async (client) => {
+        return await client.Catalogs.Releases.Create({ catalogId });
+      }, "Failed to publish catalog");
+    },
+    [apiCall]
+  );
+
+  /**
+   * Get catalog releases
+   */
+  const getCatalogReleases = useCallback(
+    async (catalogId: string) => {
+      return apiCall(async (client) => {
+        return await client.Catalogs.GetCatalogReleases(catalogId);
+      }, "Failed to get catalog releases");
+    },
+    [apiCall]
+  );
+
   // Reset API error when client changes
   useEffect(() => {
     if (isReady) {
@@ -1155,6 +1188,9 @@ export const useEpccApi = (orgId?: string, storeId?: string) => {
     fetchProductNodes,
     attachProductToNode,
     detachProductFromNode,
+    getAllCatalogs,
+    publishCatalog,
+    getCatalogReleases,
 
     // Fulfillment methods
     createFulfillment,
