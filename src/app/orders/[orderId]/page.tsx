@@ -12,6 +12,7 @@ import { OrderItemPromotions } from "../../../components/orders/OrderItemPromoti
 import FulfillmentOverlay from "../../../components/orders/FulfillmentOverlay";
 import OrderFulfillmentTab from "../../../components/orders/OrderFulfillmentTab";
 import AdditionalInfoAccordion from "../../../components/orders/AdditionalInfoAccordion";
+import CustomInputsAccordion from "../../../components/orders/CustomInputsAccordion";
 import {
   generateAndDownloadPackingSlip,
   type PackingSlipData,
@@ -786,6 +787,16 @@ export default function OrderDetailsPage({ params }: OrderDetailsPageProps) {
                                               item?.custom_inputs
                                                 ?.additional_information || []
                                             }
+                                          />
+
+                                          {/* Other Custom Inputs */}
+                                          <CustomInputsAccordion
+                                            customInputs={
+                                              item?.custom_inputs || {}
+                                            }
+                                            excludeKeys={[
+                                              "additional_information",
+                                            ]}
                                           />
                                         </div>
                                       ))}
