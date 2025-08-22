@@ -13,7 +13,11 @@ import { useToast } from "../../contexts/ToastContext";
 
 interface MappingBuilderProps {
   mapping?: Mapping;
-  onSave: (mapping: Omit<Mapping, "id" | "createdAt" | "updatedAt">) => void;
+  onSave: (
+    mapping: Omit<Mapping, "id" | "createdAt" | "updatedAt"> & {
+      externalReference?: string;
+    }
+  ) => void;
   onCancel: () => void;
 }
 
@@ -43,7 +47,7 @@ const MappingBuilder: React.FC<MappingBuilderProps> = ({
     mapping?.entityType || "custom"
   );
   const [selectedCustomApi, setSelectedCustomApi] = useState<string>(
-    mapping?.entityType === "custom" ? "" : ""
+    mapping?.entityType === "custom" ? mapping.externalReference || "" : ""
   );
   const [customApis, setCustomApis] = useState<any[]>([]);
   const [loadingCustomApis, setLoadingCustomApis] = useState(false);
@@ -65,12 +69,32 @@ const MappingBuilder: React.FC<MappingBuilderProps> = ({
     }
   }, [selectedCustomApi, entityType, fetchAllCustomFields]);
 
+  // Update state when mapping prop changes
+  useEffect(() => {
+    if (mapping) {
+      setMappingName(mapping.name);
+      setMappingDescription(mapping.description || "");
+      setEntityType(mapping.entityType);
+      setFields(mapping.fields || []);
+      // Set selectedCustomApi for custom entity types
+      if (mapping.entityType === "custom") {
+        setSelectedCustomApi(mapping.externalReference || "");
+      }
+    }
+  }, [mapping]);
+
   const fetchCustomApis = async () => {
     setLoadingCustomApis(true);
     try {
       const result = await fetchAllCustomApis();
       if (result?.data) {
-        setCustomApis(result.data);
+        // Filter out the mappings and mappings_fields custom APIs to prevent circular references
+        // These APIs are used internally by the mapping system and shouldn't be selectable
+        const filteredApis = result.data.filter(
+          (api: any) =>
+            api.slug !== "mappings" && api.slug !== "mappings_fields"
+        );
+        setCustomApis(filteredApis);
       }
     } catch (error) {
       console.error("Error fetching custom APIs:", error);
@@ -287,10 +311,12 @@ const MappingBuilder: React.FC<MappingBuilderProps> = ({
       return;
     }
 
+    // Call the onSave callback with form data - let the parent handle API calls
     onSave({
       name: mappingName,
       description: mappingDescription,
       entityType,
+      externalReference: selectedCustomApi || undefined,
       fields: fields.sort((a, b) => a.order - b.order),
     });
   };
@@ -372,24 +398,32 @@ const MappingBuilder: React.FC<MappingBuilderProps> = ({
               >
                 Custom API *
               </label>
-              <select
-                id="custom-api-selection"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                value={selectedCustomApi}
-                onChange={(e) => setSelectedCustomApi(e.target.value)}
-                disabled={loadingCustomApis}
-              >
-                <option value="">
-                  {loadingCustomApis
-                    ? "Loading custom APIs..."
-                    : "Select a custom API..."}
-                </option>
-                {customApis.map((api) => (
-                  <option key={api.id} value={api.id}>
-                    {api.name || api.slug}
+              {mapping && mapping.entityType === "custom" ? (
+                // Show custom API name when editing (read-only)
+                <div className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-gray-900">
+                  {mapping.customApiName || "Custom API"}
+                </div>
+              ) : (
+                // Show dropdown for new mappings
+                <select
+                  id="custom-api-selection"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  value={selectedCustomApi}
+                  onChange={(e) => setSelectedCustomApi(e.target.value)}
+                  disabled={loadingCustomApis}
+                >
+                  <option value="">
+                    {loadingCustomApis
+                      ? "Loading custom APIs..."
+                      : "Select a custom API..."}
                   </option>
-                ))}
-              </select>
+                  {customApis.map((api) => (
+                    <option key={api.id} value={api.id}>
+                      {api.name || api.slug}
+                    </option>
+                  ))}
+                </select>
+              )}
             </div>
           )}
         </div>
@@ -406,7 +440,9 @@ const MappingBuilder: React.FC<MappingBuilderProps> = ({
       </div>
 
       {/* Fields Section */}
-      {(entityType !== "custom" || selectedCustomApi) && (
+      {(entityType !== "custom" ||
+        selectedCustomApi ||
+        (mapping && mapping.entityType === "custom")) && (
         <div className="bg-white rounded-lg border border-gray-200 p-6">
           <div className="flex justify-between items-center mb-4">
             <div className="flex items-center space-x-2">
@@ -636,7 +672,12 @@ const FieldEditor: React.FC<FieldEditorProps> = ({
   onSave,
   onCancel,
 }) => {
-  const [editedField, setEditedField] = useState<MappingField>({ ...field });
+  const [editedField, setEditedField] = useState<MappingField>({
+    ...field,
+    validationRules: Array.isArray(field.validationRules)
+      ? field.validationRules
+      : [],
+  });
 
   const handleFieldChange = (key: keyof MappingField, value: any) => {
     setEditedField((prev) => ({ ...prev, [key]: value }));

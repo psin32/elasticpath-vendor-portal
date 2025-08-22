@@ -487,40 +487,45 @@ export const useEpccApi = (orgId?: string, storeId?: string) => {
   );
 
   /**
-   * Check if order_fulfillment custom API exists
+   * Check if custom API exists
    */
-  const checkOrderFulfillmentAPI = useCallback(async (): Promise<{
-    exists: boolean;
-    data?: any;
-    error?: any;
-  }> => {
-    try {
-      const result = await apiCall(async (client) => {
-        try {
-          const response = await client.CustomApis.Filter({
-            eq: {
-              slug: "order_fulfillments",
-            },
-          }).All();
-          if (response.data.length > 0) {
-            return { exists: true, data: response.data[0] };
-          }
-          return { exists: false, error: null };
-        } catch (error: any) {
-          // If we get a 404, the flow doesn't exist
-          if (error.status === 404 || error.response?.status === 404) {
+  const checkCustomAPIBySlug = useCallback(
+    async (
+      slug: string
+    ): Promise<{
+      exists: boolean;
+      data?: any;
+      error?: any;
+    }> => {
+      try {
+        const result = await apiCall(async (client) => {
+          try {
+            const response = await client.CustomApis.Filter({
+              eq: {
+                slug: slug,
+              },
+            }).All();
+            if (response.data.length > 0) {
+              return { exists: true, data: response.data[0] };
+            }
             return { exists: false, error: null };
+          } catch (error: any) {
+            // If we get a 404, the flow doesn't exist
+            if (error.status === 404 || error.response?.status === 404) {
+              return { exists: false, error: null };
+            }
+            // For other errors, rethrow
+            throw error;
           }
-          // For other errors, rethrow
-          throw error;
-        }
-      }, "Failed to check order fulfillment API");
+        }, "Failed to check order fulfillment API");
 
-      return result || { exists: false, error: "Unknown error" };
-    } catch (error) {
-      return { exists: false, error };
-    }
-  }, [apiCall]);
+        return result || { exists: false, error: "Unknown error" };
+      } catch (error) {
+        return { exists: false, error };
+      }
+    },
+    [apiCall]
+  );
 
   /**
    * Create order_fulfillment custom API with fields
@@ -1148,6 +1153,496 @@ export const useEpccApi = (orgId?: string, storeId?: string) => {
     [apiCall]
   );
 
+  /**
+   * Create mapping fields
+   */
+  const createMappingFieldsAPI = useCallback(async () => {
+    return apiCall(async (client) => {
+      const request: CustomApiBase = {
+        name: "Mappings Fields",
+        description: "Custom API for mapping fields management",
+        slug: "mappings_fields",
+        api_type: "mapping_fields_ext",
+        type: "custom_api",
+        allow_upserts: false,
+      };
+      const flowResponse = await client.CustomApis.Create(request);
+      const flowId = flowResponse.data.id;
+
+      // Create custom fields for the flow
+      const fields = [
+        {
+          type: "custom_field",
+          name: "Mapping ID",
+          slug: "mapping_id",
+          field_type: "string",
+          description: "Mapping ID",
+          use_as_url_slug: false,
+          validation: {
+            string: {
+              allow_null_values: false,
+              immutable: true,
+              min_length: null,
+              max_length: null,
+              regex: null,
+              unique: "no",
+              unique_case_insensitivity: false,
+            },
+          },
+          presentation: {
+            sort_order: 1000,
+          },
+        },
+        {
+          type: "custom_field",
+          name: "Name",
+          slug: "name",
+          field_type: "string",
+          description: "Name",
+          use_as_url_slug: false,
+          validation: {
+            string: {
+              allow_null_values: false,
+              immutable: false,
+              min_length: null,
+              max_length: null,
+              regex: null,
+              unique: "no",
+              unique_case_insensitivity: false,
+            },
+          },
+          presentation: {
+            sort_order: 950,
+          },
+        },
+        {
+          type: "custom_field",
+          name: "Label",
+          slug: "label",
+          field_type: "string",
+          description: "Label",
+          use_as_url_slug: false,
+          validation: {
+            string: {
+              allow_null_values: false,
+              immutable: false,
+              min_length: null,
+              max_length: null,
+              regex: null,
+              unique: "no",
+              unique_case_insensitivity: false,
+            },
+          },
+          presentation: {
+            sort_order: 900,
+          },
+        },
+        {
+          type: "custom_field",
+          name: "Description",
+          slug: "description",
+          field_type: "string",
+          description: "Description",
+          use_as_url_slug: false,
+          validation: {
+            string: {
+              allow_null_values: true,
+              immutable: false,
+              min_length: null,
+              max_length: null,
+              regex: null,
+              unique: "no",
+              unique_case_insensitivity: false,
+            },
+          },
+          presentation: {
+            sort_order: 850,
+          },
+        },
+        {
+          type: "custom_field",
+          name: "Field Type",
+          slug: "field_type",
+          field_type: "string",
+          description: "Field Type",
+          use_as_url_slug: false,
+          validation: {
+            string: {
+              allow_null_values: false,
+              immutable: false,
+              min_length: null,
+              max_length: null,
+              regex: null,
+              unique: "no",
+              unique_case_insensitivity: false,
+            },
+          },
+          presentation: {
+            sort_order: 800,
+          },
+        },
+        {
+          type: "custom_field",
+          name: "Required",
+          slug: "required",
+          field_type: "boolean",
+          description: "Required",
+          use_as_url_slug: false,
+          validation: {
+            boolean: {
+              allow_null_values: true,
+              immutable: false,
+            },
+          },
+          presentation: {
+            sort_order: 750,
+          },
+        },
+        {
+          type: "custom_field",
+          name: "Validation Rule",
+          slug: "validation_rule",
+          field_type: "string",
+          description: "Validation Rule",
+          use_as_url_slug: false,
+          validation: {
+            string: {
+              allow_null_values: true,
+              immutable: false,
+              min_length: null,
+              max_length: null,
+              regex: null,
+              unique: "no",
+              unique_case_insensitivity: false,
+            },
+          },
+          presentation: {
+            sort_order: 700,
+          },
+        },
+      ];
+
+      // Create each field
+      const fieldPromises = fields.map((field) =>
+        client.CustomApis.CreateField(flowId, field)
+      );
+
+      const fieldResponses = await Promise.all(fieldPromises);
+
+      return {
+        flow: flowResponse,
+        fields: fieldResponses,
+      };
+    }, "Failed to create mapping fields API");
+  }, [apiCall]);
+
+  /**
+   * Create mapping custom API with fields
+   */
+  const createMappingAPI = useCallback(async () => {
+    return apiCall(async (client) => {
+      const request: CustomApiBase = {
+        name: "Mappings",
+        description: "Custom API for mapping management",
+        slug: "mappings",
+        api_type: "mapping_ext",
+        type: "custom_api",
+        allow_upserts: false,
+      };
+      const flowResponse = await client.CustomApis.Create(request);
+      const flowId = flowResponse.data.id;
+
+      // Create custom fields for the flow
+      const fields = [
+        {
+          type: "custom_field",
+          name: "Name",
+          slug: "name",
+          field_type: "string",
+          description: "Name",
+          use_as_url_slug: false,
+          validation: {
+            string: {
+              allow_null_values: false,
+              immutable: false,
+              min_length: null,
+              max_length: null,
+              regex: null,
+              unique: "no",
+              unique_case_insensitivity: false,
+            },
+          },
+          presentation: {
+            sort_order: 1000,
+          },
+        },
+        {
+          type: "custom_field",
+          name: "Description",
+          slug: "description",
+          field_type: "string",
+          description: "Description",
+          use_as_url_slug: false,
+          validation: {
+            string: {
+              allow_null_values: false,
+              immutable: false,
+              min_length: null,
+              max_length: null,
+              regex: null,
+              unique: "no",
+              unique_case_insensitivity: false,
+            },
+          },
+          presentation: {
+            sort_order: 950,
+          },
+        },
+        {
+          type: "custom_field",
+          name: "Entity Type",
+          slug: "entity_type",
+          field_type: "string",
+          description: "Entity Type",
+          use_as_url_slug: false,
+          validation: {
+            string: {
+              allow_null_values: true,
+              immutable: false,
+              min_length: null,
+              max_length: null,
+              regex: null,
+              unique: "no",
+              unique_case_insensitivity: false,
+            },
+          },
+          presentation: {
+            sort_order: 900,
+          },
+        },
+        {
+          type: "custom_field",
+          name: "External Reference",
+          slug: "external_reference",
+          field_type: "string",
+          description: "External Reference",
+          use_as_url_slug: false,
+          validation: {
+            string: {
+              allow_null_values: true,
+              immutable: false,
+              min_length: null,
+              max_length: null,
+              regex: null,
+              unique: "no",
+              unique_case_insensitivity: false,
+            },
+          },
+          presentation: {
+            sort_order: 850,
+          },
+        },
+      ];
+
+      // Create each field
+      const fieldPromises = fields.map((field) =>
+        client.CustomApis.CreateField(flowId, field)
+      );
+
+      const fieldResponses = await Promise.all(fieldPromises);
+
+      return {
+        flow: flowResponse,
+        fields: fieldResponses,
+      };
+    }, "Failed to create mapping API");
+  }, [apiCall]);
+
+  /**
+   * Create a mapping in the mappings custom API
+   */
+  const createMapping = useCallback(
+    async (mappingData: {
+      name: string;
+      description?: string;
+      entityType: string;
+      externalReference?: string;
+    }) => {
+      return apiCall(async (client) => {
+        // Create the mapping record
+        const mappingRecord = {
+          type: "mapping_ext",
+          name: mappingData.name,
+          description: mappingData.description || "",
+          entity_type: mappingData.entityType,
+          external_reference: mappingData.externalReference || "",
+        };
+
+        return await client.request.send(
+          `extensions/mappings`,
+          "POST",
+          {
+            data: mappingRecord,
+          },
+          undefined,
+          client,
+          false,
+          "v2"
+        );
+      }, "Failed to create mapping");
+    },
+    [apiCall]
+  );
+
+  /**
+   * Create mapping fields in the mappings_fields custom API
+   */
+  const createMappingFields = useCallback(
+    async (
+      mappingId: string,
+      fields: Array<{
+        name: string;
+        label: string;
+        type: string;
+        required: boolean;
+        description?: string;
+        validationRules?: any;
+        selectOptions?: Array<{ value: string; label: string }>;
+      }>
+    ) => {
+      return apiCall(async (client) => {
+        // Create field records
+        const fieldPromises = fields.map(async (field, index) => {
+          const fieldRecord = {
+            type: "mapping_fields_ext",
+            name: field.name,
+            label: field.label,
+            field_type: field.type,
+            description: field.description || "",
+            required: field.required,
+            validation_rules: field.validationRules || [],
+            select_options: field.selectOptions || [],
+            order: index,
+            mapping_id: mappingId,
+          };
+
+          return await client.request.send(
+            `extensions/mappings_fields`,
+            "POST",
+            {
+              data: fieldRecord,
+            },
+            undefined,
+            client,
+            false,
+            "v2"
+          );
+        });
+
+        const results = await Promise.all(fieldPromises);
+        return results;
+      }, "Failed to create mapping fields");
+    },
+    [apiCall]
+  );
+
+  /**
+   * Fetch all mappings
+   */
+  const fetchAllMappings = useCallback(async () => {
+    return apiCall(async (client) => {
+      return await client.request.send(
+        `extensions/mappings`,
+        "GET",
+        undefined,
+        undefined,
+        client,
+        false,
+        "v2"
+      );
+    }, "Failed to fetch all mappings");
+  }, [apiCall]);
+
+  /**
+   * Fetch mapping
+   */
+  const fetchMapping = useCallback(
+    async (mappingId: string) => {
+      return apiCall(async (client) => {
+        return await client.request.send(
+          `extensions/mappings/${mappingId}`,
+          "GET",
+          undefined,
+          undefined,
+          client,
+          false,
+          "v2"
+        );
+      }, "Failed to fetch mapping");
+    },
+    [apiCall]
+  );
+
+  /**
+   * Fetch mappings fields
+   */
+  const fetchMappingsFields = useCallback(
+    async (mappingId: string) => {
+      return apiCall(async (client) => {
+        return await client.request.send(
+          `extensions/mappings_fields?filter=eq(mapping_id,${mappingId})`,
+          "GET",
+          undefined,
+          undefined,
+          client,
+          false,
+          "v2"
+        );
+      }, "Failed to fetch mappings fields");
+    },
+    [apiCall]
+  );
+
+  /**
+   * Delete mapping
+   */
+  const deleteMapping = useCallback(
+    async (mappingId: string) => {
+      return apiCall(async (client) => {
+        return await client.request.send(
+          `extensions/mappings/${mappingId}`,
+          "DELETE",
+          undefined,
+          undefined,
+          client,
+          false,
+          "v2"
+        );
+      }, "Failed to delete mapping");
+    },
+    [apiCall]
+  );
+
+  /**
+   * Delete mapping field
+   */
+  const deleteMappingField = useCallback(
+    async (fieldId: string) => {
+      return apiCall(async (client) => {
+        return await client.request.send(
+          `extensions/mappings_fields/${fieldId}`,
+          "DELETE",
+          undefined,
+          undefined,
+          client,
+          false,
+          "v2"
+        );
+      }, "Failed to delete mapping field");
+    },
+    [apiCall]
+  );
+
   // Reset API error when client changes
   useEffect(() => {
     if (isReady) {
@@ -1217,13 +1712,21 @@ export const useEpccApi = (orgId?: string, storeId?: string) => {
     createFulfillment,
     fetchFulfillments,
     updateFulfillment,
-    checkOrderFulfillmentAPI,
+    checkCustomAPIBySlug,
     createOrderFulfillmentAPI,
     fulfilOrder,
     cancelOrder,
     fetchAllCustomApis,
     fetchAllCustomFields,
-
+    createMappingFieldsAPI,
+    createMappingAPI,
+    createMapping,
+    createMappingFields,
+    fetchAllMappings,
+    fetchMappingsFields,
+    fetchMapping,
+    deleteMapping,
+    deleteMappingField,
     // Utility methods
     clearApiError: () => setApiError(null),
     isLoading: clientLoading || apiLoading,

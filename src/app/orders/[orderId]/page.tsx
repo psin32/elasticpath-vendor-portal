@@ -99,7 +99,7 @@ export default function OrderDetailsPage({ params }: OrderDetailsPageProps) {
     fetchShippingGroups,
     createFulfillment,
     fetchFulfillments,
-    checkOrderFulfillmentAPI,
+    checkCustomAPIBySlug,
     createOrderFulfillmentAPI,
     fulfilOrder,
   } = useEpccApi(selectedOrgId || undefined, selectedStoreId || undefined);
@@ -928,7 +928,9 @@ export default function OrderDetailsPage({ params }: OrderDetailsPageProps) {
           }
           return result;
         }}
-        onCheckOrderFulfillmentAPI={checkOrderFulfillmentAPI}
+        onCheckOrderFulfillmentAPI={() =>
+          checkCustomAPIBySlug("order_fulfillments")
+        }
         onCreateOrderFulfillmentAPI={createOrderFulfillmentAPI}
       />
     </div>

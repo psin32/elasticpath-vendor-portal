@@ -133,6 +133,13 @@ export const useMappingManager = () => {
     [datasets, saveDatasets]
   );
 
+  const getDataset = useCallback(
+    (id: string) => {
+      return datasets.find((dataset) => dataset.id === id) || null;
+    },
+    [datasets]
+  );
+
   // Validation functions
   const validateField = useCallback(
     (field: MappingField, value: any): string[] => {
@@ -354,6 +361,7 @@ export const useMappingManager = () => {
     createDataset,
     updateDataset,
     deleteDataset,
+    getDataset,
 
     // Validation
     validateField,
