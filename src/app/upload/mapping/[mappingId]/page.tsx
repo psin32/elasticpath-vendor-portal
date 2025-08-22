@@ -16,8 +16,10 @@ const EditMappingPage: React.FC = () => {
     fetchMapping,
     fetchMappingsFields,
     fetchAllCustomApis,
-    createMapping: createMappingInAPI,
+    updateMapping: updateMappingInAPI,
     createMappingFields: createMappingFieldsInAPI,
+    updateMappingFields: updateMappingFieldsInAPI,
+    deleteMappingField: deleteMappingFieldInAPI,
   } = useEpccApi(selectedOrgId || undefined, selectedStoreId || undefined);
   const { showToast } = useToast();
 
@@ -53,7 +55,17 @@ const EditMappingPage: React.FC = () => {
 
       // Fetch fields for this mapping
       const fieldsResult = await fetchMappingsFields(mappingId);
-      const fields = fieldsResult?.data || [];
+      let fields = fieldsResult?.data || [];
+
+      // Sort fields by sequence (from mapping_fields) for proper ordering
+      if (fields.length > 0) {
+        fields = fields.sort((a: any, b: any) => {
+          const sequenceA = a.sequence ?? 0;
+          const sequenceB = b.sequence ?? 0;
+          // Lower sequence numbers should appear first (ascending order)
+          return sequenceA - sequenceB;
+        });
+      }
 
       // If entity type is custom, fetch custom API details
       let customApiName = "";
@@ -94,7 +106,7 @@ const EditMappingPage: React.FC = () => {
           description: field.description || "",
           validationRules: field.validation_rules || [],
           selectOptions: field.select_options || [],
-          order: field.order || index,
+          order: field.sequence || index,
         })),
         createdAt: foundMapping.created_at || new Date().toISOString(),
         updatedAt: foundMapping.updated_at || new Date().toISOString(),
@@ -115,37 +127,94 @@ const EditMappingPage: React.FC = () => {
   };
 
   const handleSaveMapping = async (
-    mappingData: Omit<Mapping, "id" | "createdAt" | "updatedAt">
+    mappingData: Omit<Mapping, "id" | "createdAt" | "updatedAt"> & {
+      externalReference?: string;
+    }
   ) => {
     if (!mapping) return;
 
     try {
       // Update mapping in the custom API
-      const mappingResult = await createMappingInAPI({
+      const mappingResult = await updateMappingInAPI(mappingId, {
         name: mappingData.name,
         description: mappingData.description,
         entityType: mappingData.entityType,
-        externalReference: undefined, // For editing, we don't change the external reference
+        externalReference: mappingData.externalReference,
       });
 
       if (!mappingResult?.data) {
         throw new Error("Failed to update mapping in custom API");
       }
 
-      // Update mapping fields in the custom API
-      const fieldsData = mappingData.fields
-        .sort((a, b) => a.order - b.order)
-        .map((field) => ({
-          name: field.name,
-          label: field.label,
-          type: field.type,
-          required: field.required,
-          description: field.description,
-          validationRules: field.validationRules,
-          selectOptions: field.selectOptions,
-        }));
+      // Handle field updates
+      const currentFieldIds = new Set(mappingFields.map((f: any) => f.id));
+      const newFieldIds = new Set(
+        mappingData.fields
+          .map((f) => f.id)
+          .filter((id) => !id.startsWith("field_"))
+      );
 
-      await createMappingFieldsInAPI(mappingId, fieldsData);
+      // Fields to delete (exist in current but not in new)
+      const fieldsToDelete = mappingFields.filter(
+        (f: any) => !mappingData.fields.some((newField) => newField.id === f.id)
+      );
+
+      // Fields to update (exist in both)
+      const fieldsToUpdate = mappingData.fields.filter(
+        (field) =>
+          !field.id.startsWith("field_") && currentFieldIds.has(field.id)
+      );
+
+      // Fields to create (new fields with temporary IDs)
+      const fieldsToCreate = mappingData.fields.filter((field) =>
+        field.id.startsWith("field_")
+      );
+
+      // Delete removed fields
+      for (const field of fieldsToDelete) {
+        try {
+          await deleteMappingFieldInAPI(field.id);
+        } catch (error) {
+          console.warn(`Failed to delete field ${field.name}:`, error);
+        }
+      }
+
+      // Update existing fields
+      for (const field of fieldsToUpdate) {
+        try {
+          const fieldData = {
+            name: field.name,
+            label: field.label,
+            type: field.type,
+            required: field.required,
+            description: field.description,
+            validationRules: field.validationRules,
+            selectOptions: field.selectOptions,
+            order: field.order,
+          };
+
+          await updateMappingFieldsInAPI(field.id, mappingId, fieldData);
+        } catch (error) {
+          console.warn(`Failed to update field ${field.name}:`, error);
+        }
+      }
+
+      // Create new fields
+      if (fieldsToCreate.length > 0) {
+        const newFieldsData = fieldsToCreate
+          .sort((a, b) => a.order - b.order)
+          .map((field) => ({
+            name: field.name,
+            label: field.label,
+            type: field.type,
+            required: field.required,
+            description: field.description,
+            validationRules: field.validationRules,
+            selectOptions: field.selectOptions,
+          }));
+
+        await createMappingFieldsInAPI(mappingId, newFieldsData);
+      }
 
       showToast("Mapping updated successfully!", "success");
 

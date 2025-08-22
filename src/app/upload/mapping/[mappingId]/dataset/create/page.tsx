@@ -54,7 +54,17 @@ const CreateDatasetPage: React.FC = () => {
 
       // Fetch fields for this mapping
       const fieldsResult = await fetchMappingsFields(mappingId);
-      const fields = fieldsResult?.data || [];
+      let fields = fieldsResult?.data || [];
+
+      // Sort fields by sequence (from mapping_fields) for proper ordering
+      if (fields.length > 0) {
+        fields = fields.sort((a: any, b: any) => {
+          const sequenceA = a.sequence ?? 0;
+          const sequenceB = b.sequence ?? 0;
+          // Lower sequence numbers should appear first (ascending order)
+          return sequenceA - sequenceB;
+        });
+      }
 
       // Convert API data to Mapping format
       const mappingData: Mapping = {
@@ -72,7 +82,7 @@ const CreateDatasetPage: React.FC = () => {
           description: field.description || "",
           validationRules: field.validation_rules || [],
           selectOptions: field.select_options || [],
-          order: field.order || index,
+          order: field.sequence || index,
         })),
         createdAt: foundMapping.created_at || new Date().toISOString(),
         updatedAt: foundMapping.updated_at || new Date().toISOString(),
@@ -219,32 +229,6 @@ const CreateDatasetPage: React.FC = () => {
           <p className="text-gray-600">Create a new dataset for data entry</p>
         </div>
 
-        {/* Dataset Creation Form */}
-        <div className="bg-white rounded-lg border border-gray-200 p-6 mb-6">
-          <h2 className="text-lg font-medium text-gray-900 mb-4">
-            Dataset Details
-          </h2>
-          <div className="space-y-4">
-            <div>
-              <label
-                htmlFor="dataset-name"
-                className="block text-sm font-medium text-gray-700 mb-2"
-              >
-                Dataset Name *
-              </label>
-              <input
-                type="text"
-                id="dataset-name"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                value={datasetName}
-                onChange={(e) => setDatasetName(e.target.value)}
-                placeholder="Enter dataset name"
-                required
-              />
-            </div>
-          </div>
-        </div>
-
         {/* Data Entry Grid */}
         <MappingDataGrid
           mapping={mapping}
@@ -254,7 +238,7 @@ const CreateDatasetPage: React.FC = () => {
         />
 
         {/* Action Buttons */}
-        <div className="flex justify-end space-x-4">
+        <div className="flex justify-end space-x-4 mt-4">
           <button
             onClick={handleCancel}
             disabled={creating}

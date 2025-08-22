@@ -1320,6 +1320,25 @@ export const useEpccApi = (orgId?: string, storeId?: string) => {
             sort_order: 700,
           },
         },
+        {
+          type: "custom_field",
+          name: "Sequence",
+          slug: "sequence",
+          field_type: "integer",
+          description: "Sequence",
+          use_as_url_slug: false,
+          validation: {
+            integer: {
+              allow_null_values: true,
+              immutable: false,
+              min_value: 0,
+              max_value: 1000,
+            },
+          },
+          presentation: {
+            sort_order: 650,
+          },
+        },
       ];
 
       // Create each field
@@ -1495,6 +1514,46 @@ export const useEpccApi = (orgId?: string, storeId?: string) => {
   );
 
   /**
+   * Create a mapping in the mappings custom API
+   */
+  const updateMapping = useCallback(
+    async (
+      mappingId: string,
+      mappingData: {
+        name: string;
+        description?: string;
+        entityType: string;
+        externalReference?: string;
+      }
+    ) => {
+      return apiCall(async (client) => {
+        // Create the mapping record
+        const mappingRecord = {
+          type: "mapping_ext",
+          id: mappingId,
+          name: mappingData.name,
+          description: mappingData.description || "",
+          entity_type: mappingData.entityType,
+          external_reference: mappingData.externalReference || "",
+        };
+
+        return await client.request.send(
+          `extensions/mappings/${mappingId}`,
+          "PUT",
+          {
+            data: mappingRecord,
+          },
+          undefined,
+          client,
+          false,
+          "v2"
+        );
+      }, "Failed to update mapping");
+    },
+    [apiCall]
+  );
+
+  /**
    * Create mapping fields in the mappings_fields custom API
    */
   const createMappingFields = useCallback(
@@ -1522,7 +1581,7 @@ export const useEpccApi = (orgId?: string, storeId?: string) => {
             required: field.required,
             validation_rules: field.validationRules || [],
             select_options: field.selectOptions || [],
-            order: index,
+            sequence: index,
             mapping_id: mappingId,
           };
 
@@ -1542,6 +1601,55 @@ export const useEpccApi = (orgId?: string, storeId?: string) => {
         const results = await Promise.all(fieldPromises);
         return results;
       }, "Failed to create mapping fields");
+    },
+    [apiCall]
+  );
+
+  /**
+   * Update a single mapping field in the mappings_fields custom API
+   */
+  const updateMappingFields = useCallback(
+    async (
+      fieldId: string,
+      mappingId: string,
+      fieldData: {
+        name: string;
+        label: string;
+        type: string;
+        required: boolean;
+        description?: string;
+        validationRules?: any;
+        selectOptions?: Array<{ value: string; label: string }>;
+        order?: number;
+      }
+    ) => {
+      return apiCall(async (client) => {
+        const fieldRecord = {
+          type: "mapping_fields_ext",
+          id: fieldId,
+          name: fieldData.name,
+          label: fieldData.label,
+          field_type: fieldData.type,
+          description: fieldData.description || "",
+          required: fieldData.required,
+          validation_rules: fieldData.validationRules || [],
+          select_options: fieldData.selectOptions || [],
+          sequence: fieldData.order || 0,
+          mapping_id: mappingId,
+        };
+
+        return await client.request.send(
+          `extensions/mappings_fields/${fieldId}`,
+          "PUT",
+          {
+            data: fieldRecord,
+          },
+          undefined,
+          client,
+          false,
+          "v2"
+        );
+      }, "Failed to update mapping field");
     },
     [apiCall]
   );
@@ -1721,7 +1829,9 @@ export const useEpccApi = (orgId?: string, storeId?: string) => {
     createMappingFieldsAPI,
     createMappingAPI,
     createMapping,
+    updateMapping,
     createMappingFields,
+    updateMappingFields,
     fetchAllMappings,
     fetchMappingsFields,
     fetchMapping,

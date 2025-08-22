@@ -63,7 +63,17 @@ const DatasetEditorPage: React.FC = () => {
 
       // Fetch fields for this mapping
       const fieldsResult = await fetchMappingsFields(mappingId);
-      const fields = fieldsResult?.data || [];
+      let fields = fieldsResult?.data || [];
+
+      // Sort fields by sequence (from mapping_fields) for proper ordering
+      if (fields.length > 0) {
+        fields = fields.sort((a: any, b: any) => {
+          const sequenceA = a.sequence ?? 0;
+          const sequenceB = b.sequence ?? 0;
+          // Lower sequence numbers should appear first (ascending order)
+          return sequenceA - sequenceB;
+        });
+      }
 
       // Convert API data to Mapping format
       const mappingData: Mapping = {
@@ -81,7 +91,7 @@ const DatasetEditorPage: React.FC = () => {
           description: field.description || "",
           validationRules: field.validation_rules || [],
           selectOptions: field.select_options || [],
-          order: field.order || index,
+          order: field.sequence || index,
         })),
         createdAt: foundMapping.created_at || new Date().toISOString(),
         updatedAt: foundMapping.updated_at || new Date().toISOString(),

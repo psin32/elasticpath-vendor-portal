@@ -62,12 +62,12 @@ const MappingBuilder: React.FC<MappingBuilderProps> = ({
     }
   }, [selectedOrgId, selectedStoreId, fetchAllCustomApis]);
 
-  // Fetch custom fields when custom API is selected
+  // Fetch custom fields when custom API is selected (only for new mappings, not edit mode)
   useEffect(() => {
-    if (selectedCustomApi && entityType === "custom") {
+    if (selectedCustomApi && entityType === "custom" && !mapping) {
       fetchCustomFields(selectedCustomApi);
     }
-  }, [selectedCustomApi, entityType, fetchAllCustomFields]);
+  }, [selectedCustomApi, entityType, fetchAllCustomFields, mapping]);
 
   // Update state when mapping prop changes
   useEffect(() => {
@@ -111,7 +111,15 @@ const MappingBuilder: React.FC<MappingBuilderProps> = ({
     try {
       const result = await fetchAllCustomFields(customApiId);
       if (result?.data) {
-        const convertedFields: MappingField[] = result.data.map(
+        // Sort fields by presentation.sort_order (highest first), fallback to response order
+        const sortedFields = result.data.sort((a: any, b: any) => {
+          const sortOrderA = a.presentation?.sort_order ?? 0;
+          const sortOrderB = b.presentation?.sort_order ?? 0;
+          // Higher sort_order should appear first
+          return sortOrderB - sortOrderA;
+        });
+
+        const convertedFields: MappingField[] = sortedFields.map(
           (field: any, index: number) => {
             const fieldType = mapEpccFieldTypeToMappingFieldType(
               field.field_type,
@@ -383,8 +391,8 @@ const MappingBuilder: React.FC<MappingBuilderProps> = ({
               onChange={handleEntityTypeChange}
             >
               <option value="products">Products</option>
-              <option value="orders">Orders</option>
-              <option value="customers">Customers</option>
+              <option value="prices">Prices</option>
+              <option value="media_files">Media Files</option>
               <option value="custom">Custom API</option>
             </select>
           </div>
