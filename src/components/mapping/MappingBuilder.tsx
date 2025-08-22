@@ -16,6 +16,7 @@ interface MappingBuilderProps {
   onSave: (
     mapping: Omit<Mapping, "id" | "createdAt" | "updatedAt"> & {
       externalReference?: string;
+      externalType?: string;
     }
   ) => void;
   onCancel: () => void;
@@ -49,6 +50,9 @@ const MappingBuilder: React.FC<MappingBuilderProps> = ({
   const [selectedCustomApi, setSelectedCustomApi] = useState<string>(
     mapping?.entityType === "custom" ? mapping.externalReference || "" : ""
   );
+  const [selectedCustomApiType, setSelectedCustomApiType] = useState<string>(
+    mapping?.entityType === "custom" ? mapping.externalType || "" : ""
+  );
   const [customApis, setCustomApis] = useState<any[]>([]);
   const [loadingCustomApis, setLoadingCustomApis] = useState(false);
   const [loadingCustomFields, setLoadingCustomFields] = useState(false);
@@ -79,6 +83,7 @@ const MappingBuilder: React.FC<MappingBuilderProps> = ({
       // Set selectedCustomApi for custom entity types
       if (mapping.entityType === "custom") {
         setSelectedCustomApi(mapping.externalReference || "");
+        setSelectedCustomApiType(mapping.externalType || "");
       }
     }
   }, [mapping]);
@@ -240,6 +245,7 @@ const MappingBuilder: React.FC<MappingBuilderProps> = ({
     const newEntityType = event.target.value as Mapping["entityType"];
     setEntityType(newEntityType);
     setSelectedCustomApi("");
+    setSelectedCustomApiType("");
     setFields([]); // Clear fields when entity type changes
   };
 
@@ -318,13 +324,13 @@ const MappingBuilder: React.FC<MappingBuilderProps> = ({
       showToast("Mapping must have at least one field", "error");
       return;
     }
-
     // Call the onSave callback with form data - let the parent handle API calls
     onSave({
       name: mappingName,
       description: mappingDescription,
       entityType,
       externalReference: selectedCustomApi || undefined,
+      externalType: selectedCustomApiType || undefined,
       fields: fields.sort((a, b) => a.order - b.order),
     });
   };
@@ -417,7 +423,22 @@ const MappingBuilder: React.FC<MappingBuilderProps> = ({
                   id="custom-api-selection"
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   value={selectedCustomApi}
-                  onChange={(e) => setSelectedCustomApi(e.target.value)}
+                  onChange={(e) => {
+                    const selectedApiId = e.target.value;
+                    setSelectedCustomApi(selectedApiId);
+
+                    // Set the custom API type when an API is selected
+                    if (selectedApiId) {
+                      const selectedApi = customApis.find(
+                        (api) => api.id === selectedApiId
+                      );
+                      if (selectedApi) {
+                        setSelectedCustomApiType(selectedApi.api_type || "");
+                      }
+                    } else {
+                      setSelectedCustomApiType("");
+                    }
+                  }}
                   disabled={loadingCustomApis}
                 >
                   <option value="">

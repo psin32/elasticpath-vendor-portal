@@ -49,6 +49,7 @@ export interface Mapping {
   entityType: "products" | "orders" | "customers" | "custom";
   customApiName?: string;
   externalReference?: string;
+  externalType?: string;
   createdAt: Date;
   updatedAt: Date;
 }

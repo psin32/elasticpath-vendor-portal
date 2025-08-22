@@ -20,6 +20,7 @@ const CreateMappingPage: React.FC = () => {
   const handleSaveMapping = async (
     mappingData: Omit<Mapping, "id" | "createdAt" | "updatedAt"> & {
       externalReference?: string;
+      externalType?: string;
     }
   ) => {
     try {
@@ -29,6 +30,7 @@ const CreateMappingPage: React.FC = () => {
         description: mappingData.description,
         entityType: mappingData.entityType,
         externalReference: mappingData.externalReference,
+        externalType: mappingData.externalType,
       });
 
       if (!mappingResult?.data) {

@@ -47,7 +47,7 @@ const MappingPage: React.FC = () => {
 
   // Check if custom API exists on component mount
   useEffect(() => {
-    if (selectedOrgId && selectedStoreId) {
+    if (selectedStoreId) {
       checkCustomAPIStatus();
     }
   }, [selectedOrgId, selectedStoreId]);
@@ -68,7 +68,7 @@ const MappingPage: React.FC = () => {
   };
 
   const fetchMappingsFromAPI = async () => {
-    if (!selectedOrgId || !selectedStoreId) return;
+    if (!selectedStoreId) return;
 
     setLoadingMappings(true);
     try {
@@ -104,7 +104,7 @@ const MappingPage: React.FC = () => {
   };
 
   const handleSetupCustomAPI = async () => {
-    if (!selectedOrgId || !selectedStoreId) {
+    if (!selectedStoreId) {
       showToast("Please select an organization and store first", "error");
       return;
     }
@@ -498,7 +498,7 @@ const MappingPage: React.FC = () => {
                     )}
                   </div>
 
-                  <div className="pt-4 border-t border-gray-200">
+                  <div className="pt-4 border-t border-gray-200 mt-4">
                     <button
                       onClick={() => handleCreateDataset(mapping)}
                       className="w-full px-3 py-2 bg-indigo-600 text-white text-sm rounded hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"

@@ -33,13 +33,13 @@ const EditMappingPage: React.FC = () => {
 
   // Fetch mapping and fields on component mount
   useEffect(() => {
-    if (selectedOrgId && selectedStoreId && mappingId) {
+    if (selectedStoreId && mappingId) {
       fetchMappingAndFields();
     }
   }, [selectedOrgId, selectedStoreId, mappingId]);
 
   const fetchMappingAndFields = async () => {
-    if (!selectedOrgId || !selectedStoreId || !mappingId) return;
+    if (!selectedStoreId || !mappingId) return;
 
     setLoading(true);
     setError(null);
@@ -97,6 +97,7 @@ const EditMappingPage: React.FC = () => {
         entityType: foundMapping.entity_type || "custom",
         customApiName: customApiName,
         externalReference: foundMapping.external_reference,
+        externalType: foundMapping.external_type,
         fields: fields.map((field: any, index: number) => ({
           id: field.id,
           name: field.name,
@@ -129,6 +130,7 @@ const EditMappingPage: React.FC = () => {
   const handleSaveMapping = async (
     mappingData: Omit<Mapping, "id" | "createdAt" | "updatedAt"> & {
       externalReference?: string;
+      externalType?: string;
     }
   ) => {
     if (!mapping) return;
@@ -140,6 +142,7 @@ const EditMappingPage: React.FC = () => {
         description: mappingData.description,
         entityType: mappingData.entityType,
         externalReference: mappingData.externalReference,
+        externalType: mappingData.externalType,
       });
 
       if (!mappingResult?.data) {

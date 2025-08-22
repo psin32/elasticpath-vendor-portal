@@ -1461,6 +1461,28 @@ export const useEpccApi = (orgId?: string, storeId?: string) => {
             sort_order: 850,
           },
         },
+        {
+          type: "custom_field",
+          name: "External Type",
+          slug: "external_type",
+          field_type: "string",
+          description: "External Type",
+          use_as_url_slug: false,
+          validation: {
+            string: {
+              allow_null_values: true,
+              immutable: false,
+              min_length: null,
+              max_length: null,
+              regex: null,
+              unique: "no",
+              unique_case_insensitivity: false,
+            },
+          },
+          presentation: {
+            sort_order: 800,
+          },
+        },
       ];
 
       // Create each field
@@ -1486,6 +1508,7 @@ export const useEpccApi = (orgId?: string, storeId?: string) => {
       description?: string;
       entityType: string;
       externalReference?: string;
+      externalType?: string;
     }) => {
       return apiCall(async (client) => {
         // Create the mapping record
@@ -1495,6 +1518,7 @@ export const useEpccApi = (orgId?: string, storeId?: string) => {
           description: mappingData.description || "",
           entity_type: mappingData.entityType,
           external_reference: mappingData.externalReference || "",
+          external_type: mappingData.externalType || "",
         };
 
         return await client.request.send(
@@ -1524,6 +1548,7 @@ export const useEpccApi = (orgId?: string, storeId?: string) => {
         description?: string;
         entityType: string;
         externalReference?: string;
+        externalType?: string;
       }
     ) => {
       return apiCall(async (client) => {
@@ -1535,6 +1560,7 @@ export const useEpccApi = (orgId?: string, storeId?: string) => {
           description: mappingData.description || "",
           entity_type: mappingData.entityType,
           external_reference: mappingData.externalReference || "",
+          external_type: mappingData.externalType || "",
         };
 
         return await client.request.send(
@@ -1751,6 +1777,28 @@ export const useEpccApi = (orgId?: string, storeId?: string) => {
     [apiCall]
   );
 
+  /**
+   * Fetch custom API filtered data
+   */
+  const fetchCustomAPIFilteredData = useCallback(
+    async (
+      customApiId: string,
+      filterType: string,
+      filterField: string,
+      filterValue: any
+    ) => {
+      return apiCall(async (client) => {
+        const response = await client.CustomApis.Filter({
+          [filterType]: {
+            [filterField]: filterValue,
+          },
+        }).GetEntries(customApiId);
+        return response;
+      }, "Failed to fetch mappings fields");
+    },
+    [apiCall]
+  );
+
   // Reset API error when client changes
   useEffect(() => {
     if (isReady) {
@@ -1837,6 +1885,7 @@ export const useEpccApi = (orgId?: string, storeId?: string) => {
     fetchMapping,
     deleteMapping,
     deleteMappingField,
+    fetchCustomAPIFilteredData,
     // Utility methods
     clearApiError: () => setApiError(null),
     isLoading: clientLoading || apiLoading,
