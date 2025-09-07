@@ -80,10 +80,10 @@ export default function ProductEditPage() {
       }
     };
 
-    if (productId) {
+    if (productId && selectedStoreId) {
       loadProduct();
     }
-  }, [productId, fetchProduct]);
+  }, [productId, fetchProduct, selectedStoreId]);
 
   if (productLoading) {
     return (

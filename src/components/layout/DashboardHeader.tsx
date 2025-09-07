@@ -1,10 +1,13 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { DashboardHeaderProps } from "../../types/dashboard";
 import { OrganizationSelector } from "../ui/OrganizationSelector";
 import { StoreSelector } from "../ui/StoreSelector";
+import { Content as BuilderContent } from "@builder.io/sdk-react";
+import { builder } from "@builder.io/sdk";
+builder.init(process.env.NEXT_PUBLIC_BUILDER_IO_KEY || "");
 
 export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
   user,
@@ -29,6 +32,19 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
   const [showStandaloneStoreSelector, setShowStandaloneStoreSelector] =
     React.useState(false);
   const [isRefreshing, setIsRefreshing] = React.useState(false);
+  const [content, setContent] = useState(null);
+
+  useEffect(() => {
+    const init = async () => {
+      const content = await builder
+        .get("logo", {
+          prerender: false,
+        })
+        .toPromise();
+      setContent(content);
+    };
+    init();
+  }, []);
 
   // Handle organization selection with refresh indicator
   const handleOrgSelectWithRefresh = async (orgId: string) => {
@@ -60,11 +76,15 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
       <div className="w-full px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center py-4">
           <div className="flex items-center space-x-6">
-            <img
-              src="/images/kennicott-logo.png"
-              alt="Kennicott Logo"
-              className="w-52 ml-[-30px]"
-            />
+            {content && (
+              <div className="ml-[-10px]">
+                <BuilderContent
+                  model="logo"
+                  content={content}
+                  apiKey={process.env.NEXT_PUBLIC_BUILDER_IO_KEY || ""}
+                />
+              </div>
+            )}
 
             <OrganizationSelector
               organizations={user.organizations || []}

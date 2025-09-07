@@ -9,9 +9,6 @@ export default function Home() {
   if (isAuthenticated) {
     return (
       <div className="p-6">
-        <h1 className="text-2xl font-bold text-gray-900 mb-4">
-          Welcome to Kennicott Vendor Portal
-        </h1>
         <div className="bg-white shadow rounded-lg p-6">
           <p className="text-gray-600 mb-4">
             Select an organization and store from the header to get started.
