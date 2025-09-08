@@ -11,6 +11,7 @@ import {
   MinusIcon,
 } from "@heroicons/react/24/outline";
 import { ShoppingCartIcon as ShoppingCartIconSolid } from "@heroicons/react/24/solid";
+import Image from "next/image";
 
 interface CartSidebarProps {
   selectedAccountToken: string;
@@ -22,7 +23,7 @@ export default function CartSidebar({
   selectedCartId,
 }: CartSidebarProps) {
   const { selectedOrgId, selectedStoreId } = useDashboard();
-  const { fetchCartById } = useEpccApi(
+  const { fetchCartById, updateCartItemQuantity } = useEpccApi(
     selectedOrgId || undefined,
     selectedStoreId || undefined
   );
@@ -31,6 +32,8 @@ export default function CartSidebar({
   const [cartData, setCartData] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [editingQuantity, setEditingQuantity] = useState<string | null>(null);
+  const [tempQuantity, setTempQuantity] = useState<string>("");
 
   useEffect(() => {
     if (selectedAccountToken && selectedOrgId && selectedStoreId) {
@@ -65,28 +68,47 @@ export default function CartSidebar({
     }
   };
 
-  const getCartTotal = () => {
-    if (!cartData?.data.meta?.display_price?.with_tax) return "N/A";
-    return cartData.data.meta.display_price.with_tax.formatted;
-  };
-
-  const getCartSubtotal = () => {
-    if (!cartData?.data.meta?.display_price?.without_tax) return "N/A";
-    return cartData.data.meta.display_price.without_tax.formatted;
-  };
-
-  const getCartTax = () => {
-    if (!cartData?.data.meta?.display_price) return "N/A";
-    return cartData.data.meta.display_price.tax?.formatted;
-  };
-
-  const getItemTotal = (item: any) => {
-    return item.meta.display_price.with_tax?.value?.formatted || "N/A";
-  };
-
-  const handleQuantityChange = (itemId: string, newQuantity: number) => {
+  const handleQuantityChange = async (itemId: string, newQuantity: number) => {
     if (newQuantity < 1) return;
-    showToast("Quantity update functionality coming soon", "info");
+    const updatedCart = await updateCartItemQuantity(
+      selectedCartId!,
+      itemId,
+      newQuantity,
+      selectedAccountToken,
+      selectedOrgId!,
+      selectedStoreId!
+    );
+    setCartData(updatedCart);
+    showToast("Quantity updated successfully", "success");
+  };
+
+  const handleQuantityEdit = (itemId: string, currentQuantity: number) => {
+    setEditingQuantity(itemId);
+    setTempQuantity(currentQuantity.toString());
+  };
+
+  const handleQuantitySave = async (itemId: string) => {
+    const newQuantity = parseInt(tempQuantity);
+    if (isNaN(newQuantity) || newQuantity < 1) {
+      setEditingQuantity(null);
+      return;
+    }
+
+    await handleQuantityChange(itemId, newQuantity);
+    setEditingQuantity(null);
+  };
+
+  const handleQuantityCancel = () => {
+    setEditingQuantity(null);
+    setTempQuantity("");
+  };
+
+  const handleQuantityKeyPress = (e: React.KeyboardEvent, itemId: string) => {
+    if (e.key === "Enter") {
+      handleQuantitySave(itemId);
+    } else if (e.key === "Escape") {
+      handleQuantityCancel();
+    }
   };
 
   const handleRemoveItem = (itemId: string) => {
@@ -108,13 +130,10 @@ export default function CartSidebar({
               <h2 className="text-lg font-medium text-gray-900">
                 Shopping Cart
               </h2>
-              {selectedCartId && (
-                <p className="text-sm text-gray-500">{cartData?.data?.name}</p>
-              )}
             </div>
           </div>
           <div className="flex items-center space-x-3">
-            {cartData?.included?.items?.length > 0 && (
+            {cartData?.data?.length > 0 && (
               <button
                 onClick={handleCheckout}
                 className="inline-flex items-center px-3 py-1.5 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
@@ -125,21 +144,27 @@ export default function CartSidebar({
           </div>
         </div>
         {/* Footer - Cart Summary and Actions */}
-        {!loading && !error && cartData?.included?.items?.length > 0 && (
+        {!loading && !error && cartData?.data?.length > 0 && (
           <div className="px-6 py-4 space-y-4">
             {/* Cart Summary */}
             <div className="space-y-2">
               <div className="flex justify-between text-sm">
                 <span className="text-gray-600">Subtotal</span>
-                <span className="text-gray-900">{getCartSubtotal()}</span>
+                <span className="text-gray-900">
+                  {cartData.meta.display_price.without_tax.formatted}
+                </span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-gray-600">Tax</span>
-                <span className="text-gray-900">{getCartTax()}</span>
+                <span className="text-gray-900">
+                  {cartData.meta.display_price.tax?.formatted}
+                </span>
               </div>
               <div className="flex justify-between text-lg font-medium">
                 <span className="text-gray-900">Total</span>
-                <span className="text-gray-900">{getCartTotal()}</span>
+                <span className="text-gray-900">
+                  {cartData.meta.display_price.with_tax.formatted}
+                </span>
               </div>
             </div>
           </div>
@@ -178,58 +203,100 @@ export default function CartSidebar({
               <p className="text-sm text-gray-500 mb-4">{error}</p>
             </div>
           )}
-          {cartData?.included?.items?.length > 0 ? (
+          {cartData?.data?.length > 0 ? (
             <div className="px-6 py-4">
               {/* Cart Items */}
               <div className="space-y-4">
-                {cartData?.included?.items?.map((item: any) => (
+                {cartData?.data?.map((item: any) => (
                   <div
                     key={item.id}
                     className="flex items-center space-x-4 border-b border-gray-200 pb-4"
                   >
-                    <div className="flex-shrink-0">
-                      <div className="h-16 w-16 rounded-lg bg-gray-200 flex items-center justify-center">
-                        <ShoppingCartIcon className="h-8 w-8 text-gray-400" />
+                    <div className="flex-shrink-0 relative">
+                      <div className="h-16 w-16 rounded-lg bg-gray-200 flex items-center justify-center overflow-hidden">
+                        <img
+                          src={
+                            item.image.href ||
+                            "https://static.vecteezy.com/system/resources/previews/026/560/726/non_2x/product-line-icon-vector.jpg"
+                          }
+                          alt="Cart"
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                      <button
+                        onClick={() => handleRemoveItem(item.id)}
+                        className="absolute -top-1 -left-1 p-1 rounded-full bg-red-500 text-white hover:bg-red-600 shadow-md"
+                      >
+                        <TrashIcon className="h-3 w-3" />
+                      </button>
+                    </div>
+
+                    <div className="flex-1">
+                      <h4 className="text-sm  text-gray-900">{item?.name}</h4>
+
+                      <div className="flex items-center space-x-2 mt-4 mb-4">
+                        <button
+                          onClick={() =>
+                            handleQuantityChange(item.id, item.quantity - 1)
+                          }
+                          className="p-1 rounded-md text-gray-400 hover:text-gray-500"
+                        >
+                          <MinusIcon className="h-4 w-4" />
+                        </button>
+
+                        {editingQuantity === item.id ? (
+                          <input
+                            type="number"
+                            value={tempQuantity}
+                            onChange={(e) => setTempQuantity(e.target.value)}
+                            onBlur={() => handleQuantitySave(item.id)}
+                            onKeyDown={(e) =>
+                              handleQuantityKeyPress(e, item.id)
+                            }
+                            className="w-12 text-sm font-medium text-gray-900 text-center border border-gray-300 rounded px-1 py-1 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                            min="1"
+                            autoFocus
+                          />
+                        ) : (
+                          <span
+                            onClick={() =>
+                              handleQuantityEdit(item.id, item.quantity)
+                            }
+                            className="text-sm font-medium text-gray-900 min-w-[2rem] text-center cursor-pointer hover:bg-gray-100 rounded px-2 py-1"
+                          >
+                            {item.quantity}
+                          </span>
+                        )}
+
+                        <button
+                          onClick={() =>
+                            handleQuantityChange(item.id, item.quantity + 1)
+                          }
+                          className="p-1 rounded-md text-gray-400 hover:text-gray-500"
+                        >
+                          <PlusIcon className="h-4 w-4" />
+                        </button>
                       </div>
                     </div>
-
-                    <div className="flex-1 min-w-0">
-                      <h4 className="text-sm font-medium text-gray-900 truncate">
-                        {item?.name}
-                      </h4>
-                      <p className="text-sm text-gray-500">
-                        {getItemTotal(item)}
-                      </p>
+                    <div className="flex-shrink-0">
+                      <div className="flex gap-2 flex-col items-end">
+                        <span>
+                          {item.meta.display_price.with_tax.value.formatted}
+                        </span>
+                        {item.meta.display_price.without_discount?.value
+                          .amount &&
+                          item.meta.display_price.without_discount?.value
+                            .amount !==
+                            item.meta.display_price.with_tax.value.amount && (
+                            <span className="text-black/60 text-sm line-through">
+                              {
+                                item.meta.display_price.without_discount?.value
+                                  .formatted
+                              }
+                            </span>
+                          )}
+                      </div>
                     </div>
-
-                    <div className="flex items-center space-x-2">
-                      <button
-                        onClick={() =>
-                          handleQuantityChange(item.id, item.quantity - 1)
-                        }
-                        className="p-1 rounded-md text-gray-400 hover:text-gray-500"
-                      >
-                        <MinusIcon className="h-4 w-4" />
-                      </button>
-                      <span className="text-sm font-medium text-gray-900 min-w-[2rem] text-center">
-                        {item.quantity}
-                      </span>
-                      <button
-                        onClick={() =>
-                          handleQuantityChange(item.id, item.quantity + 1)
-                        }
-                        className="p-1 rounded-md text-gray-400 hover:text-gray-500"
-                      >
-                        <PlusIcon className="h-4 w-4" />
-                      </button>
-                    </div>
-
-                    <button
-                      onClick={() => handleRemoveItem(item.id)}
-                      className="p-1 rounded-md text-red-400 hover:text-red-500"
-                    >
-                      <TrashIcon className="h-4 w-4" />
-                    </button>
                   </div>
                 ))}
               </div>

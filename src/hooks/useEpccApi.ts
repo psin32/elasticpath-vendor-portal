@@ -1994,7 +1994,7 @@ export const useEpccApi = (orgId?: string, storeId?: string) => {
       }
       return apiCall(async (client) => {
         return await client.request.send(
-          `carts/${cartId}?include=items`,
+          `carts/${cartId}/items`,
           "GET",
           null,
           undefined,
@@ -2024,7 +2024,7 @@ export const useEpccApi = (orgId?: string, storeId?: string) => {
       }
       return apiCall(async (client) => {
         return await client.request.send(
-          `catalog/products?include=main_image`,
+          `catalog/products?include=main_image&filter=in(product_types,standard,parent)`,
           "GET",
           null,
           undefined,
@@ -2034,6 +2034,47 @@ export const useEpccApi = (orgId?: string, storeId?: string) => {
           headers
         );
       }, "Failed to fetch all products");
+    },
+    [apiCall]
+  );
+
+  /**
+   * Update cart item quantity
+   */
+  const updateCartItemQuantity = useCallback(
+    async (
+      cartId: string,
+      itemId: string,
+      quantity: number,
+      accountToken: string,
+      orgId: string,
+      storeId: string
+    ) => {
+      const headers: any = {
+        "EP-Account-Management-Authentication-Token": accountToken,
+      };
+      if (orgId) {
+        headers["EP-ORG-ID"] = orgId;
+      }
+      if (storeId) {
+        headers["EP-STORE-ID"] = storeId;
+      }
+      return apiCall(async (client) => {
+        return await client.request.send(
+          `carts/${cartId}/items/${itemId}`,
+          "PUT",
+          {
+            type: "cart_item",
+            id: itemId,
+            quantity,
+          },
+          undefined,
+          client,
+          undefined,
+          "v2",
+          headers
+        );
+      }, "Failed to update cart item quantity");
     },
     [apiCall]
   );
@@ -2133,6 +2174,7 @@ export const useEpccApi = (orgId?: string, storeId?: string) => {
     fetchAllAccountCarts,
     fetchAllProducts,
     fetchCartById,
+    updateCartItemQuantity,
     // Utility methods
     clearApiError: () => setApiError(null),
     isLoading: clientLoading || apiLoading,
