@@ -1799,6 +1799,45 @@ export const useEpccApi = (orgId?: string, storeId?: string) => {
     [apiCall]
   );
 
+  /**
+   * Get all account members
+   */
+  const fetchAccountMembers = useCallback(
+    async (options?: { page?: number; limit?: number }) => {
+      return apiCall(async (client) => {
+        const limit = options?.limit || 100;
+        const offset = options?.page || 0;
+
+        return await client.AccountMembers.Limit(limit).Offset(offset).All();
+      }, "Failed to fetch account members");
+    },
+    [apiCall]
+  );
+
+  /**
+   * Get all account memberships
+   */
+  const fetchAccountMemberships = useCallback(
+    async (accountMemberId: string) => {
+      return apiCall(async (client) => {
+        // return await client.AccountMemberships.AllOnAccountMember(
+        //   accountMemberId,
+        //   null
+        // );
+        return await client.request.send(
+          `account-members/${accountMemberId}/account-memberships?include=account`,
+          "GET",
+          undefined,
+          undefined,
+          client,
+          false,
+          "v2"
+        );
+      }, "Failed to fetch account memberships");
+    },
+    [apiCall]
+  );
+
   // Reset API error when client changes
   useEffect(() => {
     if (isReady) {
@@ -1886,6 +1925,8 @@ export const useEpccApi = (orgId?: string, storeId?: string) => {
     deleteMapping,
     deleteMappingField,
     fetchCustomAPIFilteredData,
+    fetchAccountMembers,
+    fetchAccountMemberships,
     // Utility methods
     clearApiError: () => setApiError(null),
     isLoading: clientLoading || apiLoading,
