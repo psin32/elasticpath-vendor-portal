@@ -33,6 +33,16 @@ export default function AccountDetailPage() {
   const [loadingData, setLoadingData] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(0);
+  const [showImpersonateOverlay, setShowImpersonateOverlay] = useState(false);
+  const [selectedAccountMember, setSelectedAccountMember] = useState<any>(null);
+  const [authenticationRealms, setAuthenticationRealms] = useState<any[]>([]);
+  const [passwordProfiles, setPasswordProfiles] = useState<any[]>([]);
+  const [selectedPasswordProfile, setSelectedPasswordProfile] =
+    useState<string>("");
+  const [realmId, setRealmId] = useState<string>("");
+  const [loadingRealms, setLoadingRealms] = useState(false);
+  const [loadingProfiles, setLoadingProfiles] = useState(false);
+  const [impersonating, setImpersonating] = useState(false);
   const [paginationInfo, setPaginationInfo] = useState<PaginationInfo>({
     current_page: 1,
     total_pages: 1,
@@ -44,10 +54,13 @@ export default function AccountDetailPage() {
   // Use the same dashboard state management
   const { selectedOrgId, selectedStoreId } = useDashboard();
 
-  const { fetchAccountMembers, fetchAccountMemberships } = useEpccApi(
-    selectedOrgId || undefined,
-    selectedStoreId || undefined
-  );
+  const {
+    fetchAccountMembers,
+    fetchAccountMemberships,
+    fetchAccountAuthenticationRealms,
+    fetchPasswordProfiles,
+    impersonateUser,
+  } = useEpccApi(selectedOrgId || undefined, selectedStoreId || undefined);
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -177,6 +190,107 @@ export default function AccountDetailPage() {
     }
   };
 
+  const handleImpersonateClick = async (accountMember: any) => {
+    setSelectedAccountMember(accountMember);
+    setShowImpersonateOverlay(true);
+    setLoadingRealms(true);
+    setPasswordProfiles([]);
+    setSelectedPasswordProfile("");
+
+    try {
+      // Fetch authentication realms
+      const realmsData = await fetchAccountAuthenticationRealms();
+      console.log("Authentication Realms Response:", realmsData);
+
+      if (realmsData?.data) {
+        const realmsArray = Array.isArray(realmsData.data)
+          ? realmsData.data
+          : [realmsData.data];
+        setAuthenticationRealms(realmsArray);
+
+        // Get the first realm's ID to fetch password profiles
+        const firstRealm = realmsArray[0];
+        const extractedRealmId = (firstRealm as any)?.relationships
+          ?.authentication_realm?.data?.id;
+
+        console.log("First Realm:", firstRealm);
+        console.log("Realm ID:", extractedRealmId);
+
+        if (extractedRealmId) {
+          setRealmId(extractedRealmId);
+          setLoadingProfiles(true);
+          const profilesData = await fetchPasswordProfiles(extractedRealmId);
+          console.log("Password Profiles Response:", profilesData);
+
+          if (profilesData?.data) {
+            const profilesArray = Array.isArray(profilesData.data)
+              ? profilesData.data
+              : [profilesData.data];
+            setPasswordProfiles(profilesArray);
+          }
+        }
+      }
+    } catch (error) {
+      showToast("Failed to load authentication data", "error");
+      console.error("Error loading authentication data:", error);
+    } finally {
+      setLoadingRealms(false);
+      setLoadingProfiles(false);
+    }
+  };
+
+  const handleImpersonateContinue = async () => {
+    if (!selectedPasswordProfile) {
+      showToast("Please select a password profile", "error");
+      return;
+    }
+
+    if (!selectedAccountMember || !realmId) {
+      showToast("Missing required data for impersonation", "error");
+      return;
+    }
+
+    setImpersonating(true);
+
+    try {
+      const result = await impersonateUser(
+        selectedAccountMember.id,
+        selectedPasswordProfile,
+        realmId
+      );
+
+      if (result && result.accounts) {
+        // Save impersonation response to localStorage
+        localStorage.setItem("impersonationData", JSON.stringify(result));
+
+        showToast(
+          "User impersonation successful! Redirecting to Order On Behalf...",
+          "success"
+        );
+        setShowImpersonateOverlay(false);
+
+        // Navigate to Order On Behalf page
+        router.push("/order-on-behalf");
+      } else {
+        showToast("Impersonation failed - no result returned", "error");
+      }
+    } catch (error) {
+      showToast("Failed to impersonate user", "error");
+    } finally {
+      setImpersonating(false);
+    }
+  };
+
+  const handleCloseOverlay = () => {
+    setShowImpersonateOverlay(false);
+    setSelectedAccountMember(null);
+    setAuthenticationRealms([]);
+    setPasswordProfiles([]);
+    setSelectedPasswordProfile("");
+    setRealmId("");
+    setImpersonating(false);
+  };
+
   if (loading) {
     return (
       <div className="h-full flex items-center justify-center bg-gray-50">
@@ -244,9 +358,32 @@ export default function AccountDetailPage() {
               {accountMember && (
                 <div className="mb-8 bg-white border border-gray-200 rounded-lg shadow-sm">
                   <div className="px-6 py-4 border-b border-gray-200">
-                    <h2 className="text-lg font-medium text-gray-900">
-                      Account Member Details
-                    </h2>
+                    <div className="flex items-center justify-between">
+                      <h2 className="text-lg font-medium text-gray-900">
+                        Account Member Details
+                      </h2>
+                      {accountMember && (
+                        <button
+                          onClick={() => handleImpersonateClick(accountMember)}
+                          className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                        >
+                          <svg
+                            className="w-4 h-4 mr-2"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                            />
+                          </svg>
+                          Impersonate User
+                        </button>
+                      )}
+                    </div>
                   </div>
                   <div className="px-6 py-4">
                     <dl className="grid grid-cols-1 gap-x-4 gap-y-6 sm:grid-cols-2">
@@ -373,7 +510,7 @@ export default function AccountDetailPage() {
                 <div className="border border-gray-200 overflow-hidden sm:rounded-lg">
                   <div className="px-4 py-5 sm:px-6 border-b border-gray-200">
                     <h3 className="text-lg leading-6 font-medium text-gray-900">
-                      Account Memberships & Associated Accounts
+                      Associated Accounts
                     </h3>
                     <p className="mt-1 max-w-2xl text-sm text-gray-500">
                       View all account memberships and their associated account
@@ -445,6 +582,140 @@ export default function AccountDetailPage() {
           </div>
         </main>
       </div>
+
+      {/* Impersonate Overlay */}
+      {showImpersonateOverlay && (
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+          <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+            <div className="mt-3">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-medium text-gray-900">
+                  Impersonate User
+                </h3>
+                <button
+                  onClick={handleCloseOverlay}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <svg
+                    className="w-6 h-6"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M6 18L18 6M6 6l12 12"
+                    />
+                  </svg>
+                </button>
+              </div>
+
+              {selectedAccountMember && (
+                <div className="mb-4 p-3 bg-gray-50 rounded-md">
+                  <p className="text-sm text-gray-600">
+                    <span className="font-medium">Account Member:</span>{" "}
+                    {(selectedAccountMember as any)?.name || "N/A"}
+                  </p>
+                  <p className="text-sm text-gray-600">
+                    <span className="font-medium">Email:</span>{" "}
+                    {(selectedAccountMember as any)?.email || "N/A"}
+                  </p>
+                </div>
+              )}
+
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Select Password Profile
+                </label>
+                {loadingProfiles ? (
+                  <div className="flex items-center justify-center py-4">
+                    <svg
+                      className="animate-spin h-5 w-5 text-indigo-600"
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                    >
+                      <circle
+                        className="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                      ></circle>
+                      <path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                      ></path>
+                    </svg>
+                    <span className="ml-2 text-sm text-gray-600">
+                      Loading profiles...
+                    </span>
+                  </div>
+                ) : (
+                  <select
+                    value={selectedPasswordProfile}
+                    onChange={(e) => setSelectedPasswordProfile(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  >
+                    <option value="">Select a password profile</option>
+                    {passwordProfiles.map((profile: any) => (
+                      <option key={profile.id} value={profile.id}>
+                        {profile?.name || profile.id}
+                      </option>
+                    ))}
+                  </select>
+                )}
+              </div>
+
+              <div className="flex justify-end space-x-3">
+                <button
+                  onClick={handleCloseOverlay}
+                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleImpersonateContinue}
+                  disabled={!selectedPasswordProfile || impersonating}
+                  className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 border border-transparent rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {impersonating ? (
+                    <div className="flex items-center">
+                      <svg
+                        className="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                      >
+                        <circle
+                          className="opacity-25"
+                          cx="12"
+                          cy="12"
+                          r="10"
+                          stroke="currentColor"
+                          strokeWidth="4"
+                        ></circle>
+                        <path
+                          className="opacity-75"
+                          fill="currentColor"
+                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                        ></path>
+                      </svg>
+                      Impersonating...
+                    </div>
+                  ) : (
+                    "Continue"
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

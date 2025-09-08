@@ -7,8 +7,10 @@ import type {
   CustomApiBase,
   ElasticPath,
   FileBase,
+  PasswordProfileBody,
   PcmProductAttachmentBody,
   PriceBookFilter,
+  UserAuthenticationPasswordProfileBody,
 } from "@elasticpath/js-sdk";
 import { v4 as uuidv4 } from "uuid";
 
@@ -1838,6 +1840,109 @@ export const useEpccApi = (orgId?: string, storeId?: string) => {
     [apiCall]
   );
 
+  /**
+   * Get all account authentication realms
+   */
+  const fetchAccountAuthenticationRealms = useCallback(async () => {
+    return apiCall(async (client) => {
+      return await client.AccountAuthenticationSettings.Get();
+    }, "Failed to fetch account authentication realms");
+  }, [apiCall]);
+
+  /**
+   * Get all password profiles
+   */
+  const fetchPasswordProfiles = useCallback(
+    async (realmId: string) => {
+      return apiCall(async (client) => {
+        return await client.PasswordProfile.All(realmId);
+      }, "Failed to fetch password profiles");
+    },
+    [apiCall]
+  );
+
+  /**
+   * Impersonate user
+   */
+  const impersonateUser = useCallback(
+    async (
+      accountMemberId: string,
+      passwordProfileId: string,
+      realmId: string
+    ) => {
+      return apiCall(async (client) => {
+        const password = "Epcc@1234";
+        const params: any = {
+          eq: { id: accountMemberId },
+        };
+        const userAuthInfo = await client.UserAuthenticationInfo.Filter(params)
+          .All(realmId)
+          .catch((err: any) => {
+            console.error("Error in UserAuthenticationInfo All", err);
+            return err;
+          });
+        const request: UserAuthenticationPasswordProfileBody = {
+          type: "user_authentication_password_profile_info",
+          password_profile_id: passwordProfileId,
+          username: userAuthInfo.data[0].email,
+          password,
+        };
+        const userAuthenticationPasswordProfile =
+          await client.UserAuthenticationPasswordProfile.Create(
+            realmId,
+            userAuthInfo.data[0].id,
+            { data: request }
+          ).catch((err: any) => {
+            console.error(
+              "Error in UserAuthenticationPasswordProfile Create",
+              err
+            );
+            return err;
+          });
+        const result = await client.AccountMembers.GenerateAccountToken({
+          type: "account_management_authentication_token",
+          authentication_mechanism: "password",
+          password_profile_id: passwordProfileId,
+          username: userAuthInfo.data[0].email,
+          password,
+        }).catch((err: any) => {
+          console.error("Error in GenerateAccountToken", err);
+          return err;
+        });
+        await client.UserAuthenticationPasswordProfile.Delete(
+          realmId,
+          userAuthInfo.data[0].id,
+          userAuthenticationPasswordProfile.data.id
+        ).catch((err: any) => {
+          console.error(
+            "Error in UserAuthenticationPasswordProfile Delete",
+            err
+          );
+        });
+        return {
+          accounts: result.data.reduce(
+            (acc: any, responseToken: any) => ({
+              ...acc,
+              [responseToken.account_id]: {
+                account_id: responseToken.account_id,
+                account_name: responseToken.account_name,
+                expires: responseToken.expires,
+                token: responseToken.token,
+                type: "account_management_authentication_token" as const,
+              },
+            }),
+            {} as Record<string, any>
+          ),
+          selected: result.data[0].account_id,
+          accountMemberId,
+          email: userAuthInfo.data[0].email,
+          name: userAuthInfo.data[0].name,
+        };
+      }, "Failed to impersonate user");
+    },
+    [apiCall]
+  );
+
   // Reset API error when client changes
   useEffect(() => {
     if (isReady) {
@@ -1927,6 +2032,9 @@ export const useEpccApi = (orgId?: string, storeId?: string) => {
     fetchCustomAPIFilteredData,
     fetchAccountMembers,
     fetchAccountMemberships,
+    fetchAccountAuthenticationRealms,
+    fetchPasswordProfiles,
+    impersonateUser,
     // Utility methods
     clearApiError: () => setApiError(null),
     isLoading: clientLoading || apiLoading,

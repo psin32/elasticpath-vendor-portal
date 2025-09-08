@@ -5,6 +5,7 @@ export type DashboardSection =
   | "orders"
   | "catalogs"
   | "accounts"
+  | "order-on-behalf"
   | "inventory"
   | "upload"
   | "bulk-upload"
