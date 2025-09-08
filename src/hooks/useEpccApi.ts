@@ -1943,6 +1943,36 @@ export const useEpccApi = (orgId?: string, storeId?: string) => {
     [apiCall]
   );
 
+  /**
+   * Get all account carts
+   */
+  const fetchAllAccountCarts = useCallback(
+    async (accountToken: string, orgId: string, storeId: string) => {
+      const headers: any = {
+        "EP-Account-Management-Authentication-Token": accountToken,
+      };
+      if (orgId) {
+        headers["EP-ORG-ID"] = orgId;
+      }
+      if (storeId) {
+        headers["EP-STORE-ID"] = storeId;
+      }
+      return apiCall(async (client) => {
+        return await client.request.send(
+          `carts`,
+          "GET",
+          null,
+          undefined,
+          client,
+          undefined,
+          "v2",
+          headers
+        );
+      }, "Failed to fetch all account carts");
+    },
+    [apiCall]
+  );
+
   // Reset API error when client changes
   useEffect(() => {
     if (isReady) {
@@ -2035,6 +2065,7 @@ export const useEpccApi = (orgId?: string, storeId?: string) => {
     fetchAccountAuthenticationRealms,
     fetchPasswordProfiles,
     impersonateUser,
+    fetchAllAccountCarts,
     // Utility methods
     clearApiError: () => setApiError(null),
     isLoading: clientLoading || apiLoading,

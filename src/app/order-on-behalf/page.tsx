@@ -6,6 +6,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/contexts/ToastContext";
 import { useDashboard } from "@/hooks/useDashboard";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
+import CartComponent from "@/components/order-on-behalf/CartComponent";
 
 interface ImpersonationData {
   accounts: Record<
@@ -300,47 +301,11 @@ export default function OrderOnBehalfPage() {
             </div>
           )}
 
-          {activeTab === "carts" && (
-            <div className="bg-white rounded-lg shadow">
-              <div className="px-6 py-4 border-b border-gray-200">
-                <h3 className="text-lg font-medium text-gray-900">Carts</h3>
-                <p className="mt-1 text-sm text-gray-500">
-                  Manage shopping carts for account:{" "}
-                  {selectedAccount?.account_name}
-                </p>
-              </div>
-              <div className="p-6">
-                <div className="text-center py-12">
-                  <svg
-                    className="mx-auto h-12 w-12 text-gray-400"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M3 3h2l.4 2M7 13h10l4-8H5.4m0 0L7 13m0 0l-2.5 5M7 13l2.5 5m6-5v6a2 2 0 01-2 2H9a2 2 0 01-2-2v-6m8 0V9a2 2 0 00-2-2H9a2 2 0 00-2 2v4.01"
-                    />
-                  </svg>
-                  <h3 className="mt-2 text-sm font-medium text-gray-900">
-                    Carts Section
-                  </h3>
-                  <p className="mt-1 text-sm text-gray-500">
-                    Cart management functionality will be implemented here.
-                  </p>
-                  <div className="mt-6">
-                    <button
-                      disabled
-                      className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-gray-400 bg-gray-100 cursor-not-allowed"
-                    >
-                      Coming Soon
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
+          {activeTab === "carts" && selectedAccount && (
+            <CartComponent
+              selectedAccountToken={selectedAccount.token}
+              accountName={selectedAccount.account_name}
+            />
           )}
         </div>
       </div>
