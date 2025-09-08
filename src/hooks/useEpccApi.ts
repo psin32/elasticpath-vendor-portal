@@ -1959,7 +1959,7 @@ export const useEpccApi = (orgId?: string, storeId?: string) => {
       }
       return apiCall(async (client) => {
         return await client.request.send(
-          `carts`,
+          `carts?include=items`,
           "GET",
           null,
           undefined,
@@ -1969,6 +1969,71 @@ export const useEpccApi = (orgId?: string, storeId?: string) => {
           headers
         );
       }, "Failed to fetch all account carts");
+    },
+    [apiCall]
+  );
+
+  /**
+   * Get cart by id
+   */
+  const fetchCartById = useCallback(
+    async (
+      cartId: string,
+      accountToken: string,
+      orgId: string,
+      storeId: string
+    ) => {
+      const headers: any = {
+        "EP-Account-Management-Authentication-Token": accountToken,
+      };
+      if (orgId) {
+        headers["EP-ORG-ID"] = orgId;
+      }
+      if (storeId) {
+        headers["EP-STORE-ID"] = storeId;
+      }
+      return apiCall(async (client) => {
+        return await client.request.send(
+          `carts/${cartId}?include=items`,
+          "GET",
+          null,
+          undefined,
+          client,
+          undefined,
+          "v2",
+          headers
+        );
+      }, "Failed to fetch cart by id");
+    },
+    [apiCall]
+  );
+
+  /**
+   * Get all products
+   */
+  const fetchAllProducts = useCallback(
+    async (accountToken: string, orgId: string, storeId: string) => {
+      const headers: any = {
+        "EP-Account-Management-Authentication-Token": accountToken,
+      };
+      if (orgId) {
+        headers["EP-ORG-ID"] = orgId;
+      }
+      if (storeId) {
+        headers["EP-STORE-ID"] = storeId;
+      }
+      return apiCall(async (client) => {
+        return await client.request.send(
+          `catalog/products?include=main_image`,
+          "GET",
+          null,
+          undefined,
+          client,
+          undefined,
+          "pcm",
+          headers
+        );
+      }, "Failed to fetch all products");
     },
     [apiCall]
   );
@@ -2066,6 +2131,8 @@ export const useEpccApi = (orgId?: string, storeId?: string) => {
     fetchPasswordProfiles,
     impersonateUser,
     fetchAllAccountCarts,
+    fetchAllProducts,
+    fetchCartById,
     // Utility methods
     clearApiError: () => setApiError(null),
     isLoading: clientLoading || apiLoading,

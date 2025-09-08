@@ -200,7 +200,6 @@ export default function AccountDetailPage() {
     try {
       // Fetch authentication realms
       const realmsData = await fetchAccountAuthenticationRealms();
-      console.log("Authentication Realms Response:", realmsData);
 
       if (realmsData?.data) {
         const realmsArray = Array.isArray(realmsData.data)
@@ -213,14 +212,10 @@ export default function AccountDetailPage() {
         const extractedRealmId = (firstRealm as any)?.relationships
           ?.authentication_realm?.data?.id;
 
-        console.log("First Realm:", firstRealm);
-        console.log("Realm ID:", extractedRealmId);
-
         if (extractedRealmId) {
           setRealmId(extractedRealmId);
           setLoadingProfiles(true);
           const profilesData = await fetchPasswordProfiles(extractedRealmId);
-          console.log("Password Profiles Response:", profilesData);
 
           if (profilesData?.data) {
             const profilesArray = Array.isArray(profilesData.data)

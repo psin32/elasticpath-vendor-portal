@@ -10,11 +10,13 @@ import { ShoppingCartIcon as ShoppingCartIconSolid } from "@heroicons/react/24/s
 interface CartComponentProps {
   selectedAccountToken: string;
   accountName: string;
+  onCartSelect?: (cartId: string) => void;
 }
 
 export default function CartComponent({
   selectedAccountToken,
   accountName,
+  onCartSelect,
 }: CartComponentProps) {
   const { selectedOrgId, selectedStoreId } = useDashboard();
   const { fetchAllAccountCarts } = useEpccApi(
@@ -226,9 +228,6 @@ export default function CartComponent({
                 Cart Name
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Description
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Price
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -265,17 +264,15 @@ export default function CartComponent({
                     </div>
                     <div className="ml-4">
                       <div className="text-sm font-medium text-gray-900">
-                        {(cart as any)?.name || `Cart ${cart.id.slice(0, 8)}`}
+                        {(cart as any)?.name}
+                        <div className="text-xs text-gray-500">
+                          {(cart as any)?.description}
+                        </div>
                       </div>
-                      <div className="text-sm text-gray-500">ID: {cart.id}</div>
                     </div>
                   </div>
                 </td>
-                <td className="px-6 py-4">
-                  <div className="text-sm text-gray-900 max-w-xs truncate">
-                    {(cart as any)?.description || "No description"}
-                  </div>
-                </td>
+
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                   {getTotalCost(cart)}
                 </td>
@@ -297,10 +294,26 @@ export default function CartComponent({
                   </button>
                   <button
                     onClick={() => {
+                      if (onCartSelect) {
+                        onCartSelect(cart.id);
+                        showToast(
+                          `Selected cart: ${
+                            (cart as any)?.name || cart.id.slice(0, 8)
+                          }`,
+                          "success"
+                        );
+                      }
+                    }}
+                    className="text-indigo-600 hover:text-indigo-900 font-medium"
+                  >
+                    Select Cart
+                  </button>
+                  <button
+                    onClick={() => {
                       // TODO: Implement edit cart
                       showToast("Edit cart coming soon", "info");
                     }}
-                    className="text-gray-600 hover:text-gray-900"
+                    className="text-gray-600 hover:text-gray-900 ml-4"
                   >
                     Edit
                   </button>

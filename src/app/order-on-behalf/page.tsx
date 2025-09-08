@@ -7,6 +7,8 @@ import { useToast } from "@/contexts/ToastContext";
 import { useDashboard } from "@/hooks/useDashboard";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import CartComponent from "@/components/order-on-behalf/CartComponent";
+import ProductsComponent from "@/components/order-on-behalf/ProductsComponent";
+import CartSidebar from "@/components/order-on-behalf/CartSidebar";
 
 interface ImpersonationData {
   accounts: Record<
@@ -35,6 +37,9 @@ export default function OrderOnBehalfPage() {
     useState<ImpersonationData | null>(null);
   const [selectedAccountId, setSelectedAccountId] = useState<string>("");
   const [activeTab, setActiveTab] = useState<"products" | "carts">("products");
+  const [isCartSidebarOpen, setIsCartSidebarOpen] = useState(true);
+  const [cartItemCount, setCartItemCount] = useState(0);
+  const [selectedCartId, setSelectedCartId] = useState<string>("");
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -94,6 +99,15 @@ export default function OrderOnBehalfPage() {
     router.push("/accounts");
   };
 
+  const handleCartSelect = (cartId: string) => {
+    setSelectedCartId(cartId);
+    setIsCartSidebarOpen(true);
+  };
+
+  const handleClearCartSelection = () => {
+    setSelectedCartId("");
+  };
+
   if (loading) {
     return (
       <div className="h-full flex items-center justify-center bg-gray-50">
@@ -136,6 +150,19 @@ export default function OrderOnBehalfPage() {
                 <h1 className="text-2xl font-bold text-gray-900">
                   Order On Behalf
                 </h1>
+                {selectedAccount && (
+                  <div className="mt-2 text-sm text-blue-700">
+                    <p>
+                      You are currently impersonating{" "}
+                      <strong>{impersonationData.name}</strong> for account{" "}
+                      <strong>{selectedAccount?.account_name}</strong>
+                    </p>
+                    <p className="mt-1">
+                      Session expires:{" "}
+                      {new Date(selectedAccount?.expires).toLocaleString()}
+                    </p>
+                  </div>
+                )}
               </div>
               <div className="flex items-center space-x-4">
                 {hasMultipleAccounts && (
@@ -163,6 +190,7 @@ export default function OrderOnBehalfPage() {
                     </select>
                   </div>
                 )}
+
                 <button
                   onClick={handleNewImpersonation}
                   className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
@@ -188,126 +216,64 @@ export default function OrderOnBehalfPage() {
         </div>
       </div>
 
-      {/* Impersonation Status */}
-      {selectedAccount && (
-        <div className="px-4 sm:px-6 lg:px-8 py-4">
-          <div className="bg-blue-50 border border-blue-200 rounded-md p-4">
-            <div className="flex">
-              <div className="flex-shrink-0">
-                <svg
-                  className="h-5 w-5 text-blue-400"
-                  fill="currentColor"
-                  viewBox="0 0 20 20"
+      {/* Main Content with Cart Sidebar */}
+      <div className="flex flex-1 overflow-hidden">
+        {/* Left Content Area */}
+        <div className="flex-1 overflow-hidden">
+          <div className="px-4 sm:px-6 lg:px-8 py-6 h-full flex flex-col">
+            <div className="border-b border-gray-200">
+              <nav className="-mb-px flex space-x-8">
+                <button
+                  onClick={() => setActiveTab("products")}
+                  className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                    activeTab === "products"
+                      ? "border-indigo-500 text-indigo-600"
+                      : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                  }`}
                 >
-                  <path
-                    fillRule="evenodd"
-                    d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
-                    clipRule="evenodd"
-                  />
-                </svg>
-              </div>
-              <div className="ml-3">
-                <h3 className="text-sm font-medium text-blue-800">
-                  Impersonation Active
-                </h3>
-                <div className="mt-2 text-sm text-blue-700">
-                  <p>
-                    You are currently impersonating{" "}
-                    <strong>{impersonationData.name}</strong> for account{" "}
-                    <strong>{selectedAccount.account_name}</strong>
-                  </p>
-                  <p className="mt-1">
-                    Session expires:{" "}
-                    {new Date(selectedAccount.expires).toLocaleString()}
-                  </p>
-                </div>
-              </div>
+                  Browse Products
+                </button>
+                <button
+                  onClick={() => setActiveTab("carts")}
+                  className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                    activeTab === "carts"
+                      ? "border-indigo-500 text-indigo-600"
+                      : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                  }`}
+                >
+                  Carts
+                </button>
+              </nav>
+            </div>
+
+            {/* Tab Content */}
+            <div className="flex-1 overflow-auto mt-6">
+              {activeTab === "products" && selectedAccount && (
+                <ProductsComponent
+                  selectedAccountToken={selectedAccount.token}
+                  selectedOrgId={selectedOrgId || ""}
+                  selectedStoreId={selectedStoreId || ""}
+                />
+              )}
+
+              {activeTab === "carts" && selectedAccount && (
+                <CartComponent
+                  selectedAccountToken={selectedAccount.token}
+                  accountName={selectedAccount.account_name}
+                  onCartSelect={handleCartSelect}
+                />
+              )}
             </div>
           </div>
         </div>
-      )}
 
-      {/* Tabs */}
-      <div className="px-4 sm:px-6 lg:px-8 py-6">
-        <div className="border-b border-gray-200">
-          <nav className="-mb-px flex space-x-8">
-            <button
-              onClick={() => setActiveTab("products")}
-              className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                activeTab === "products"
-                  ? "border-indigo-500 text-indigo-600"
-                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-              }`}
-            >
-              Browse Products
-            </button>
-            <button
-              onClick={() => setActiveTab("carts")}
-              className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                activeTab === "carts"
-                  ? "border-indigo-500 text-indigo-600"
-                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-              }`}
-            >
-              Carts
-            </button>
-          </nav>
-        </div>
-
-        {/* Tab Content */}
-        <div className="mt-6">
-          {activeTab === "products" && (
-            <div className="bg-white rounded-lg shadow">
-              <div className="px-6 py-4 border-b border-gray-200">
-                <h3 className="text-lg font-medium text-gray-900">
-                  Browse Products
-                </h3>
-                <p className="mt-1 text-sm text-gray-500">
-                  Browse and manage products for account:{" "}
-                  {selectedAccount?.account_name}
-                </p>
-              </div>
-              <div className="p-6">
-                <div className="text-center py-12">
-                  <svg
-                    className="mx-auto h-12 w-12 text-gray-400"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
-                    />
-                  </svg>
-                  <h3 className="mt-2 text-sm font-medium text-gray-900">
-                    Products Section
-                  </h3>
-                  <p className="mt-1 text-sm text-gray-500">
-                    Product browsing functionality will be implemented here.
-                  </p>
-                  <div className="mt-6">
-                    <button
-                      disabled
-                      className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-gray-400 bg-gray-100 cursor-not-allowed"
-                    >
-                      Coming Soon
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {activeTab === "carts" && selectedAccount && (
-            <CartComponent
-              selectedAccountToken={selectedAccount.token}
-              accountName={selectedAccount.account_name}
-            />
-          )}
-        </div>
+        {/* Right Sidebar - Cart */}
+        {selectedAccount && (
+          <CartSidebar
+            selectedAccountToken={selectedAccount.token}
+            selectedCartId={selectedCartId}
+          />
+        )}
       </div>
     </div>
   );
