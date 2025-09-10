@@ -4,11 +4,8 @@ import { useState } from "react";
 import { useEpccApi } from "@/hooks/useEpccApi";
 import { useDashboard } from "@/hooks/useDashboard";
 import { useToast } from "@/contexts/ToastContext";
-import { useCart } from "@/hooks/useCart";
+import { useCartContext } from "@/contexts/CartContext";
 import { XMarkIcon, PlusIcon } from "@heroicons/react/24/outline";
-import Cookies from "js-cookie";
-
-const SELECTED_CART_COOKIE = "selectedCartId";
 
 interface CreateCartProps {
   selectedAccountToken: string;
@@ -31,7 +28,7 @@ export default function CreateCart({
     selectedStoreId || undefined
   );
   const { showToast } = useToast();
-  const { selectCart } = useCart(selectedAccountToken);
+  const { selectCart } = useCartContext();
 
   const [showOverlay, setShowOverlay] = useState(false);
   const [cartName, setCartName] = useState("");

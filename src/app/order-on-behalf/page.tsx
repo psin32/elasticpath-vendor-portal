@@ -9,6 +9,7 @@ import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import CartComponent from "@/components/order-on-behalf/CartComponent";
 import ProductsComponent from "@/components/order-on-behalf/ProductsComponent";
 import CartSidebar from "@/components/order-on-behalf/CartSidebar";
+import { CartProvider } from "@/contexts/CartContext";
 import Cookies from "js-cookie";
 
 const SELECTED_CART_COOKIE = "selectedCartId";
@@ -162,144 +163,146 @@ export default function OrderOnBehalfPage() {
   const hasMultipleAccounts = accountOptions.length > 1;
 
   return (
-    <div className="h-full bg-gray-50">
-      {/* Header */}
-      <div className="bg-white shadow">
-        <div className="px-4 sm:px-6 lg:px-8">
-          <div className="py-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900">
-                  Order On Behalf
-                </h1>
-                {selectedAccount && (
-                  <div className="mt-2 text-sm text-blue-700">
-                    <p>
-                      You are currently impersonating{" "}
-                      <strong>{impersonationData.name}</strong> for account{" "}
-                      <strong>{selectedAccount?.account_name}</strong>
-                    </p>
-                    <p className="mt-1">
-                      Session expires:{" "}
-                      {new Date(selectedAccount?.expires).toLocaleString()}
-                    </p>
-                  </div>
-                )}
-              </div>
-              <div className="flex items-center space-x-4">
-                {hasMultipleAccounts && (
-                  <div className="flex items-center space-x-2">
-                    <label
-                      htmlFor="account-select"
-                      className="text-sm font-medium text-gray-700"
-                    >
-                      Account:
-                    </label>
-                    <select
-                      id="account-select"
-                      value={selectedAccountId}
-                      onChange={(e) => handleAccountChange(e.target.value)}
-                      className="block w-48 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                    >
-                      {accountOptions.map((account) => (
-                        <option
-                          key={account.account_id}
-                          value={account.account_id}
-                        >
-                          {account.account_name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                )}
+    <CartProvider selectedAccountToken={selectedAccount?.token}>
+      <div className="h-full bg-gray-50">
+        {/* Header */}
+        <div className="bg-white shadow">
+          <div className="px-4 sm:px-6 lg:px-8">
+            <div className="py-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h1 className="text-2xl font-bold text-gray-900">
+                    Order On Behalf
+                  </h1>
+                  {selectedAccount && (
+                    <div className="mt-2 text-sm text-blue-700">
+                      <p>
+                        You are currently impersonating{" "}
+                        <strong>{impersonationData.name}</strong> for account{" "}
+                        <strong>{selectedAccount?.account_name}</strong>
+                      </p>
+                      <p className="mt-1">
+                        Session expires:{" "}
+                        {new Date(selectedAccount?.expires).toLocaleString()}
+                      </p>
+                    </div>
+                  )}
+                </div>
+                <div className="flex items-center space-x-4">
+                  {hasMultipleAccounts && (
+                    <div className="flex items-center space-x-2">
+                      <label
+                        htmlFor="account-select"
+                        className="text-sm font-medium text-gray-700"
+                      >
+                        Account:
+                      </label>
+                      <select
+                        id="account-select"
+                        value={selectedAccountId}
+                        onChange={(e) => handleAccountChange(e.target.value)}
+                        className="block w-48 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                      >
+                        {accountOptions.map((account) => (
+                          <option
+                            key={account.account_id}
+                            value={account.account_id}
+                          >
+                            {account.account_name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
 
-                <button
-                  onClick={handleNewImpersonation}
-                  className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                >
-                  <svg
-                    className="w-4 h-4 mr-2"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
+                  <button
+                    onClick={handleNewImpersonation}
+                    className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
                   >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-                    />
-                  </svg>
-                  End Session
-                </button>
+                    <svg
+                      className="w-4 h-4 mr-2"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                      />
+                    </svg>
+                    End Session
+                  </button>
+                </div>
               </div>
             </div>
           </div>
         </div>
-      </div>
 
-      {/* Main Content with Cart Sidebar */}
-      <div className="flex flex-1 overflow-hidden">
-        {/* Left Content Area */}
-        <div className="flex-1 overflow-hidden">
-          <div className="px-4 sm:px-6 lg:px-8 py-6 h-full flex flex-col">
-            <div className="border-b border-gray-200">
-              <nav className="-mb-px flex space-x-8">
-                <button
-                  onClick={() => setActiveTab("carts")}
-                  className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                    activeTab === "carts"
-                      ? "border-indigo-500 text-indigo-600"
-                      : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-                  }`}
-                >
-                  Carts
-                </button>
+        {/* Main Content with Cart Sidebar */}
+        <div className="flex flex-1 overflow-hidden">
+          {/* Left Content Area */}
+          <div className="flex-1 overflow-hidden">
+            <div className="px-4 sm:px-6 lg:px-8 py-6 h-full flex flex-col">
+              <div className="border-b border-gray-200">
+                <nav className="-mb-px flex space-x-8">
+                  <button
+                    onClick={() => setActiveTab("carts")}
+                    className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                      activeTab === "carts"
+                        ? "border-indigo-500 text-indigo-600"
+                        : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                    }`}
+                  >
+                    Carts
+                  </button>
 
-                <button
-                  onClick={() => setActiveTab("products")}
-                  className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                    activeTab === "products"
-                      ? "border-indigo-500 text-indigo-600"
-                      : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-                  }`}
-                >
-                  Browse Products
-                </button>
-              </nav>
-            </div>
+                  <button
+                    onClick={() => setActiveTab("products")}
+                    className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                      activeTab === "products"
+                        ? "border-indigo-500 text-indigo-600"
+                        : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                    }`}
+                  >
+                    Browse Products
+                  </button>
+                </nav>
+              </div>
 
-            {/* Tab Content */}
-            <div className="flex-1 overflow-auto mt-6">
-              {activeTab === "products" && selectedAccount && (
-                <ProductsComponent
-                  selectedAccountToken={selectedAccount.token}
-                  selectedOrgId={selectedOrgId || ""}
-                  selectedStoreId={selectedStoreId || ""}
-                />
-              )}
+              {/* Tab Content */}
+              <div className="flex-1 overflow-auto mt-6">
+                {activeTab === "products" && selectedAccount && (
+                  <ProductsComponent
+                    selectedAccountToken={selectedAccount.token}
+                    selectedOrgId={selectedOrgId || ""}
+                    selectedStoreId={selectedStoreId || ""}
+                  />
+                )}
 
-              {activeTab === "carts" && selectedAccount && (
-                <CartComponent
-                  selectedAccountToken={selectedAccount.token}
-                  accountName={selectedAccount.account_name}
-                  onCartSelect={handleCartSelect}
-                  onCartCreated={handleCartCreated}
-                />
-              )}
+                {activeTab === "carts" && selectedAccount && (
+                  <CartComponent
+                    selectedAccountToken={selectedAccount.token}
+                    accountName={selectedAccount.account_name}
+                    onCartSelect={handleCartSelect}
+                    onCartCreated={handleCartCreated}
+                  />
+                )}
+              </div>
             </div>
           </div>
-        </div>
 
-        {/* Right Sidebar - Cart */}
-        {selectedAccount && (
-          <CartSidebar
-            selectedAccountToken={selectedAccount.token}
-            selectedCartId={selectedCartId}
-            onCartCreated={handleCartCreated}
-          />
-        )}
+          {/* Right Sidebar - Cart */}
+          {selectedAccount && (
+            <CartSidebar
+              selectedAccountToken={selectedAccount.token}
+              selectedCartId={selectedCartId}
+              onCartCreated={handleCartCreated}
+            />
+          )}
+        </div>
       </div>
-    </div>
+    </CartProvider>
   );
 }

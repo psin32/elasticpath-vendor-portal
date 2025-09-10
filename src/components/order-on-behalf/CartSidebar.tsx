@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useDashboard } from "@/hooks/useDashboard";
 import { useToast } from "@/contexts/ToastContext";
-import { useCart } from "@/hooks/useCart";
+import { useCartContext } from "@/contexts/CartContext";
 import {
   ShoppingCartIcon,
   TrashIcon,
@@ -26,26 +26,17 @@ export default function CartSidebar({
 }: CartSidebarProps) {
   const { showToast } = useToast();
   const {
+    selectedCartId: currentCartId,
     cartData,
     loading,
     error,
     deselectCart,
     updateItemQuantity,
-    selectCart,
     removeItemFromCart,
-  } = useCart(selectedAccountToken);
-
-  const currentCartId = selectedCartId;
+  } = useCartContext();
 
   const [editingQuantity, setEditingQuantity] = useState<string | null>(null);
   const [tempQuantity, setTempQuantity] = useState<string>("");
-
-  // Trigger cart loading when selectedCartId changes
-  useEffect(() => {
-    if (selectedCartId && selectedAccountToken) {
-      selectCart(selectedCartId);
-    }
-  }, [selectedCartId, selectedAccountToken, selectCart]);
 
   const handleQuantityChange = async (itemId: string, newQuantity: number) => {
     if (newQuantity < 1) return;

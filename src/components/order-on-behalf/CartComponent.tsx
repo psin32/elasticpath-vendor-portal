@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useEpccApi } from "@/hooks/useEpccApi";
 import { useDashboard } from "@/hooks/useDashboard";
 import { useToast } from "@/contexts/ToastContext";
-import { useCart } from "@/hooks/useCart";
+import { useCartContext } from "@/contexts/CartContext";
 import { Cart } from "@elasticpath/js-sdk";
 import { ShoppingCartIcon as ShoppingCartIconSolid } from "@heroicons/react/24/solid";
 import { TrashIcon } from "@heroicons/react/24/outline";
@@ -29,12 +29,13 @@ export default function CartComponent({
     selectedStoreId || undefined
   );
   const { showToast } = useToast();
-  const { selectCart } = useCart(selectedAccountToken);
+  const { selectCart } = useCartContext();
 
   const [carts, setCarts] = useState<Cart[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [deletingCartId, setDeletingCartId] = useState<string | null>(null);
+  const { cartData } = useCartContext();
 
   useEffect(() => {
     if (selectedAccountToken && selectedStoreId) {
@@ -43,7 +44,7 @@ export default function CartComponent({
       setCarts([]);
       setError(null);
     }
-  }, [selectedAccountToken, selectedStoreId]);
+  }, [selectedAccountToken, selectedStoreId, cartData]);
 
   const loadCarts = async () => {
     setLoading(true);

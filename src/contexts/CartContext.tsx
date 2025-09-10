@@ -1,14 +1,20 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
-import { useEpccApi } from "./useEpccApi";
-import { useDashboard } from "./useDashboard";
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useCallback,
+} from "react";
+import { useEpccApi } from "@/hooks/useEpccApi";
+import { useDashboard } from "@/hooks/useDashboard";
 import { useToast } from "@/contexts/ToastContext";
 import Cookies from "js-cookie";
 
 const SELECTED_CART_COOKIE = "selectedCartId";
 
-interface UseCartReturn {
+interface CartContextType {
   // State
   selectedCartId: string;
   cartData: any | null;
@@ -24,7 +30,25 @@ interface UseCartReturn {
   removeItemFromCart: (itemId: string) => Promise<void>;
 }
 
-export const useCart = (selectedAccountToken?: string): UseCartReturn => {
+const CartContext = createContext<CartContextType | undefined>(undefined);
+
+export const useCartContext = () => {
+  const context = useContext(CartContext);
+  if (context === undefined) {
+    throw new Error("useCartContext must be used within a CartProvider");
+  }
+  return context;
+};
+
+interface CartProviderProps {
+  children: React.ReactNode;
+  selectedAccountToken?: string;
+}
+
+export const CartProvider: React.FC<CartProviderProps> = ({
+  children,
+  selectedAccountToken,
+}) => {
   const { selectedOrgId, selectedStoreId } = useDashboard();
   const { fetchCartById, updateCartItemQuantity, addToCart, deleteCartItem } =
     useEpccApi(selectedOrgId || undefined, selectedStoreId || undefined);
@@ -87,6 +111,7 @@ export const useCart = (selectedAccountToken?: string): UseCartReturn => {
     (cartId: string) => {
       setSelectedCartId(cartId);
       Cookies.set(SELECTED_CART_COOKIE, cartId, { expires: 7 });
+      showToast(`Cart selected: ${cartId.slice(0, 8)}...`, "success");
     },
     [showToast]
   );
@@ -95,6 +120,7 @@ export const useCart = (selectedAccountToken?: string): UseCartReturn => {
     setSelectedCartId("");
     setCartData(null);
     Cookies.remove(SELECTED_CART_COOKIE);
+    showToast("Cart deselected", "success");
   }, [showToast]);
 
   const refreshCart = useCallback(async () => {
@@ -121,7 +147,9 @@ export const useCart = (selectedAccountToken?: string): UseCartReturn => {
         );
 
         if (result) {
-          setCartData(result);
+          // Refresh cart data to get updated cart with all items
+          await loadCartData();
+          showToast("Item added to cart", "success");
         }
       } catch (err) {
         const errorMessage =
@@ -135,7 +163,7 @@ export const useCart = (selectedAccountToken?: string): UseCartReturn => {
       selectedOrgId,
       selectedStoreId,
       addToCart,
-      refreshCart,
+      loadCartData,
       showToast,
     ]
   );
@@ -157,7 +185,11 @@ export const useCart = (selectedAccountToken?: string): UseCartReturn => {
           selectedStoreId!
         );
 
-        setCartData(updatedCart);
+        if (updatedCart) {
+          // Refresh cart data to get updated cart with all items
+          await loadCartData();
+          showToast("Quantity updated successfully", "success");
+        }
       } catch (err) {
         const errorMessage =
           err instanceof Error ? err.message : "Failed to update quantity";
@@ -170,7 +202,7 @@ export const useCart = (selectedAccountToken?: string): UseCartReturn => {
       selectedOrgId,
       selectedStoreId,
       updateCartItemQuantity,
-      setCartData,
+      loadCartData,
       showToast,
     ]
   );
@@ -183,6 +215,8 @@ export const useCart = (selectedAccountToken?: string): UseCartReturn => {
       }
 
       try {
+        // This would need to be implemented in useEpccApi
+        // For now, just refresh the cart data
         const response = await deleteCartItem(
           selectedCartId,
           itemId,
@@ -191,6 +225,8 @@ export const useCart = (selectedAccountToken?: string): UseCartReturn => {
           selectedStoreId!
         );
         setCartData(response);
+        await refreshCart();
+        showToast("Item removed from cart", "success");
       } catch (err) {
         const errorMessage =
           err instanceof Error ? err.message : "Failed to remove item";
@@ -200,7 +236,7 @@ export const useCart = (selectedAccountToken?: string): UseCartReturn => {
     [selectedCartId, selectedAccountToken, refreshCart, showToast]
   );
 
-  return {
+  const value: CartContextType = {
     // State
     selectedCartId,
     cartData,
@@ -215,4 +251,6 @@ export const useCart = (selectedAccountToken?: string): UseCartReturn => {
     updateItemQuantity,
     removeItemFromCart,
   };
+
+  return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
 };

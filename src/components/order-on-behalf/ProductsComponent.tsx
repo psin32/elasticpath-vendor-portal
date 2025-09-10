@@ -3,46 +3,13 @@
 import { useState, useEffect } from "react";
 import { useEpccApi } from "@/hooks/useEpccApi";
 import { useToast } from "@/contexts/ToastContext";
-import { useCart } from "@/hooks/useCart";
-import { ShoppingCartIcon as ShoppingCartIconSolid } from "@heroicons/react/24/solid";
+import { useCartContext } from "@/contexts/CartContext";
 import {
   MagnifyingGlassIcon,
-  FunnelIcon,
-  Squares2X2Icon,
-  ListBulletIcon,
   PlusIcon,
   MinusIcon,
   CheckCircleIcon,
 } from "@heroicons/react/24/outline";
-import Image from "next/image";
-
-interface Product {
-  id: string;
-  type: string;
-  name?: string;
-  slug?: string;
-  description?: string;
-  meta?: {
-    display_price?: {
-      with_tax?: {
-        formatted?: string;
-        amount?: number;
-      };
-    };
-    timestamps?: {
-      created_at: string;
-      updated_at: string;
-    };
-  };
-  relationships?: {
-    main_image?: {
-      data?: {
-        id: string;
-        type: string;
-      };
-    };
-  };
-}
 
 interface ProductsComponentProps {
   selectedAccountToken: string;
@@ -60,9 +27,9 @@ export default function ProductsComponent({
     selectedStoreId || undefined
   );
   const { showToast } = useToast();
-  const { addItemToCart } = useCart(selectedAccountToken);
+  const { addItemToCart } = useCartContext();
 
-  const [products, setProducts] = useState<Product[]>([]);
+  const [products, setProducts] = useState<any[]>([]);
   const [mainImages, setMainImages] = useState<Record<string, any>>({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -122,11 +89,7 @@ export default function ProductsComponent({
     }
   };
 
-  const getProductPrice = (product: Product) => {
-    return (product as any)?.meta?.display_price?.with_tax?.formatted || "N/A";
-  };
-
-  const getProductImage = (product: Product) => {
+  const getProductImage = (product: any) => {
     const imageId = (product as any)?.relationships?.main_image?.data?.id;
     if (imageId && mainImages[imageId]?.link?.href) {
       return mainImages[imageId].link.href;
