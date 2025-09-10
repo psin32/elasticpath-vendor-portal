@@ -2079,6 +2079,157 @@ export const useEpccApi = (orgId?: string, storeId?: string) => {
     [apiCall]
   );
 
+  /**
+   * Create new cart
+   */
+  const createNewCart = useCallback(
+    async (
+      cartName: string,
+      cartDescription: string,
+      accountToken: string,
+      orgId: string,
+      storeId: string
+    ) => {
+      const headers: any = {
+        "EP-Account-Management-Authentication-Token": accountToken,
+      };
+      if (orgId) {
+        headers["EP-ORG-ID"] = orgId;
+      }
+      if (storeId) {
+        headers["EP-STORE-ID"] = storeId;
+      }
+      return apiCall(async (client) => {
+        return await client.request.send(
+          `carts`,
+          "POST",
+          {
+            name: cartName,
+            description: cartDescription,
+          },
+          undefined,
+          client,
+          undefined,
+          "v2",
+          headers
+        );
+      }, "Failed to create new cart");
+    },
+    [apiCall]
+  );
+
+  /**
+   * Delete cart
+   */
+  const deleteCart = useCallback(
+    async (
+      cartId: string,
+      accountToken: string,
+      orgId: string,
+      storeId: string
+    ) => {
+      const headers: any = {
+        "EP-Account-Management-Authentication-Token": accountToken,
+      };
+      if (orgId) {
+        headers["EP-ORG-ID"] = orgId;
+      }
+      if (storeId) {
+        headers["EP-STORE-ID"] = storeId;
+      }
+      return apiCall(async (client) => {
+        return await client.request.send(
+          `carts/${cartId}`,
+          "DELETE",
+          undefined,
+          undefined,
+          client,
+          undefined,
+          "v2",
+          headers
+        );
+      }, "Failed to delete cart");
+    },
+    [apiCall]
+  );
+
+  /**
+   * Add to cart
+   */
+  const addToCart = useCallback(
+    async (
+      cartId: string,
+      productId: string,
+      quantity: number,
+      accountToken: string,
+      orgId: string,
+      storeId: string
+    ) => {
+      const headers: any = {
+        "EP-Account-Management-Authentication-Token": accountToken,
+      };
+      if (orgId) {
+        headers["EP-ORG-ID"] = orgId;
+      }
+      if (storeId) {
+        headers["EP-STORE-ID"] = storeId;
+      }
+      return apiCall(async (client) => {
+        return await client.request.send(
+          `carts/${cartId}/items`,
+          "POST",
+          {
+            type: "cart_item",
+            id: productId,
+            quantity,
+          },
+          undefined,
+          client,
+          undefined,
+          "v2",
+          headers
+        );
+      }, "Failed to add to cart");
+    },
+    [apiCall]
+  );
+
+  /**
+   * Delete cart item
+   */
+  const deleteCartItem = useCallback(
+    async (
+      cartId: string,
+      cartItemId: string,
+      accountToken: string,
+      orgId: string,
+      storeId: string
+    ) => {
+      const headers: any = {
+        "EP-Account-Management-Authentication-Token": accountToken,
+      };
+      if (orgId) {
+        headers["EP-ORG-ID"] = orgId;
+      }
+      if (storeId) {
+        headers["EP-STORE-ID"] = storeId;
+      }
+      return apiCall(async (client) => {
+        return await client.request.send(
+          `carts/${cartId}/items/${cartItemId}`,
+          "DELETE",
+          undefined,
+          undefined,
+          client,
+          undefined,
+          "v2",
+          headers
+        );
+      }, "Failed to delete cart item");
+    },
+    [apiCall]
+  );
+
   // Reset API error when client changes
   useEffect(() => {
     if (isReady) {
@@ -2175,6 +2326,11 @@ export const useEpccApi = (orgId?: string, storeId?: string) => {
     fetchAllProducts,
     fetchCartById,
     updateCartItemQuantity,
+    createNewCart,
+    deleteCart,
+    addToCart,
+    deleteCartItem,
+
     // Utility methods
     clearApiError: () => setApiError(null),
     isLoading: clientLoading || apiLoading,

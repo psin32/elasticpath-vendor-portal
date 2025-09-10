@@ -9,6 +9,9 @@ import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import CartComponent from "@/components/order-on-behalf/CartComponent";
 import ProductsComponent from "@/components/order-on-behalf/ProductsComponent";
 import CartSidebar from "@/components/order-on-behalf/CartSidebar";
+import Cookies from "js-cookie";
+
+const SELECTED_CART_COOKIE = "selectedCartId";
 
 interface ImpersonationData {
   accounts: Record<
@@ -36,7 +39,7 @@ export default function OrderOnBehalfPage() {
   const [impersonationData, setImpersonationData] =
     useState<ImpersonationData | null>(null);
   const [selectedAccountId, setSelectedAccountId] = useState<string>("");
-  const [activeTab, setActiveTab] = useState<"products" | "carts">("products");
+  const [activeTab, setActiveTab] = useState<"products" | "carts">("carts");
   const [isCartSidebarOpen, setIsCartSidebarOpen] = useState(true);
   const [cartItemCount, setCartItemCount] = useState(0);
   const [selectedCartId, setSelectedCartId] = useState<string>("");
@@ -80,6 +83,14 @@ export default function OrderOnBehalfPage() {
     }
   }, [router, showToast]);
 
+  // Load selected cart ID from cookies
+  useEffect(() => {
+    const savedCartId = Cookies.get(SELECTED_CART_COOKIE);
+    if (savedCartId) {
+      setSelectedCartId(savedCartId);
+    }
+  }, []);
+
   const handleAccountChange = (accountId: string) => {
     setSelectedAccountId(accountId);
   };
@@ -102,10 +113,21 @@ export default function OrderOnBehalfPage() {
   const handleCartSelect = (cartId: string) => {
     setSelectedCartId(cartId);
     setIsCartSidebarOpen(true);
+    // Save cart ID to cookie
+    Cookies.set(SELECTED_CART_COOKIE, cartId, { expires: 7 }); // Expires in 7 days
   };
 
   const handleClearCartSelection = () => {
     setSelectedCartId("");
+    // Remove cart ID from cookie
+    Cookies.remove(SELECTED_CART_COOKIE);
+  };
+
+  const handleCartCreated = (cartId: string) => {
+    setSelectedCartId(cartId);
+    // Save new cart ID to cookie
+    Cookies.set(SELECTED_CART_COOKIE, cartId, { expires: 7 }); // Expires in 7 days
+    showToast("New cart created and selected", "success");
   };
 
   if (loading) {
@@ -224,16 +246,6 @@ export default function OrderOnBehalfPage() {
             <div className="border-b border-gray-200">
               <nav className="-mb-px flex space-x-8">
                 <button
-                  onClick={() => setActiveTab("products")}
-                  className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                    activeTab === "products"
-                      ? "border-indigo-500 text-indigo-600"
-                      : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-                  }`}
-                >
-                  Browse Products
-                </button>
-                <button
                   onClick={() => setActiveTab("carts")}
                   className={`py-2 px-1 border-b-2 font-medium text-sm ${
                     activeTab === "carts"
@@ -242,6 +254,17 @@ export default function OrderOnBehalfPage() {
                   }`}
                 >
                   Carts
+                </button>
+
+                <button
+                  onClick={() => setActiveTab("products")}
+                  className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                    activeTab === "products"
+                      ? "border-indigo-500 text-indigo-600"
+                      : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                  }`}
+                >
+                  Browse Products
                 </button>
               </nav>
             </div>
@@ -261,6 +284,7 @@ export default function OrderOnBehalfPage() {
                   selectedAccountToken={selectedAccount.token}
                   accountName={selectedAccount.account_name}
                   onCartSelect={handleCartSelect}
+                  onCartCreated={handleCartCreated}
                 />
               )}
             </div>
@@ -272,6 +296,7 @@ export default function OrderOnBehalfPage() {
           <CartSidebar
             selectedAccountToken={selectedAccount.token}
             selectedCartId={selectedCartId}
+            onCartCreated={handleCartCreated}
           />
         )}
       </div>

@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useEpccApi } from "@/hooks/useEpccApi";
 import { useToast } from "@/contexts/ToastContext";
+import { useCart } from "@/hooks/useCart";
 import { ShoppingCartIcon as ShoppingCartIconSolid } from "@heroicons/react/24/solid";
 import {
   MagnifyingGlassIcon,
@@ -59,6 +60,7 @@ export default function ProductsComponent({
     selectedStoreId || undefined
   );
   const { showToast } = useToast();
+  const { addItemToCart } = useCart(selectedAccountToken);
 
   const [products, setProducts] = useState<Product[]>([]);
   const [mainImages, setMainImages] = useState<Record<string, any>>({});
@@ -138,13 +140,15 @@ export default function ProductsComponent({
     }));
   };
 
-  const handleAddToCart = (productId: string) => {
+  const handleAddToCart = async (productId: string) => {
     const currentQuantity = cartItems[productId] || 0;
-    setCartItems((prev) => ({
-      ...prev,
-      [productId]: currentQuantity + 1,
-    }));
-    showToast("Product added to cart", "success");
+
+    if (currentQuantity === 0) {
+      showToast("Please select a quantity first", "error");
+      return;
+    }
+
+    await addItemToCart(productId, currentQuantity);
   };
 
   if (loading) {

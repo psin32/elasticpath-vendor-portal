@@ -148,6 +148,39 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
                     </button>
                   </div>
                 )}
+
+                {/* Clear Button */}
+                <button
+                  onClick={() => {
+                    // Clear local storage
+                    const keysToRemove = [];
+                    for (let i = 0; i < localStorage.length; i++) {
+                      const key = localStorage.key(i);
+                      if (
+                        key &&
+                        (key.startsWith("org_stores_") ||
+                          key === "selected_org_id" ||
+                          key === "selected_store_id" ||
+                          key === "standalone_stores")
+                      ) {
+                        keysToRemove.push(key);
+                      }
+                    }
+                    keysToRemove.forEach((key) => localStorage.removeItem(key));
+
+                    // Clear UI state
+                    onOrgSelect("");
+                    setShowOrgSelector(false);
+                    setShowStoreSelector(false);
+
+                    // Refresh the page
+                    window.location.reload();
+                  }}
+                  className="ml-2 px-3 py-1.5 text-xs font-medium text-gray-600 bg-gray-100 border border-gray-300 rounded-md hover:bg-gray-200 hover:text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition-colors"
+                  title="Clear selection"
+                >
+                  Clear
+                </button>
               </div>
             )}
 

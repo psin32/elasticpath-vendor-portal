@@ -4,30 +4,37 @@ import { useState, useEffect } from "react";
 import { useEpccApi } from "@/hooks/useEpccApi";
 import { useDashboard } from "@/hooks/useDashboard";
 import { useToast } from "@/contexts/ToastContext";
+import { useCart } from "@/hooks/useCart";
 import { Cart } from "@elasticpath/js-sdk";
 import { ShoppingCartIcon as ShoppingCartIconSolid } from "@heroicons/react/24/solid";
+import { TrashIcon } from "@heroicons/react/24/outline";
+import CreateCart from "./CreateCart";
 
 interface CartComponentProps {
   selectedAccountToken: string;
   accountName: string;
   onCartSelect?: (cartId: string) => void;
+  onCartCreated?: (cartId: string) => void;
 }
 
 export default function CartComponent({
   selectedAccountToken,
   accountName,
   onCartSelect,
+  onCartCreated,
 }: CartComponentProps) {
   const { selectedOrgId, selectedStoreId } = useDashboard();
-  const { fetchAllAccountCarts } = useEpccApi(
+  const { fetchAllAccountCarts, deleteCart } = useEpccApi(
     selectedOrgId || undefined,
     selectedStoreId || undefined
   );
   const { showToast } = useToast();
+  const { selectCart } = useCart(selectedAccountToken);
 
   const [carts, setCarts] = useState<Cart[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [deletingCartId, setDeletingCartId] = useState<string | null>(null);
 
   useEffect(() => {
     if (selectedAccountToken && selectedStoreId) {
@@ -91,6 +98,37 @@ export default function CartComponent({
   const formatDate = (dateString?: string) => {
     if (!dateString) return "N/A";
     return new Date(dateString).toLocaleString();
+  };
+
+  const handleDeleteCart = async (cartId: string, cartName: string) => {
+    if (
+      !window.confirm(
+        `Are you sure you want to delete the cart "${cartName}"? This action cannot be undone.`
+      )
+    ) {
+      return;
+    }
+
+    setDeletingCartId(cartId);
+    try {
+      await deleteCart(
+        cartId,
+        selectedAccountToken,
+        selectedOrgId || "",
+        selectedStoreId || ""
+      );
+
+      showToast(`Cart "${cartName}" deleted successfully`, "success");
+      // Reload carts to reflect the deletion
+      await loadCarts();
+    } catch (err) {
+      const errorMessage =
+        err instanceof Error ? err.message : "Failed to delete cart";
+      showToast(errorMessage, "error");
+      console.error("Error deleting cart:", err);
+    } finally {
+      setDeletingCartId(null);
+    }
   };
 
   if (loading) {
@@ -198,25 +236,41 @@ export default function CartComponent({
           <div>
             <h3 className="text-lg font-medium text-gray-900">Carts</h3>
           </div>
-          <button
-            onClick={loadCarts}
-            className="inline-flex items-center px-3 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-          >
-            <svg
-              className="w-4 h-4 mr-2"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
+          <div className="flex items-center space-x-3">
+            <CreateCart
+              selectedAccountToken={selectedAccountToken}
+              onCartCreated={(cartId) => {
+                selectCart(cartId);
+                if (onCartCreated) {
+                  onCartCreated(cartId);
+                }
+                // Refresh the cart list after creating a new cart
+                loadCarts();
+              }}
+              buttonText="Create Cart"
+              buttonVariant="primary"
+              showIcon={true}
+            />
+            <button
+              onClick={loadCarts}
+              className="inline-flex items-center px-3 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
             >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-              />
-            </svg>
-            Refresh
-          </button>
+              <svg
+                className="w-4 h-4 mr-2"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                />
+              </svg>
+              Refresh
+            </button>
+          </div>
         </div>
       </div>
 
@@ -283,40 +337,32 @@ export default function CartComponent({
                   {formatDate((cart as any)?.meta?.timestamps?.updated_at)}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                  <button
-                    onClick={() => {
-                      // TODO: Implement cart details view
-                      showToast("Cart details view coming soon", "info");
-                    }}
-                    className="text-indigo-600 hover:text-indigo-900 mr-4"
-                  >
-                    View
-                  </button>
-                  <button
-                    onClick={() => {
-                      if (onCartSelect) {
-                        onCartSelect(cart.id);
-                        showToast(
-                          `Selected cart: ${
-                            (cart as any)?.name || cart.id.slice(0, 8)
-                          }`,
-                          "success"
-                        );
+                  <div className="flex items-center space-x-3">
+                    <button
+                      onClick={() => {
+                        selectCart(cart.id);
+                        if (onCartSelect) {
+                          onCartSelect(cart.id);
+                        }
+                      }}
+                      className="text-indigo-600 hover:text-indigo-900 font-medium"
+                    >
+                      Select Cart
+                    </button>
+                    <button
+                      onClick={() =>
+                        handleDeleteCart(
+                          cart.id,
+                          (cart as any)?.name || "Unnamed Cart"
+                        )
                       }
-                    }}
-                    className="text-indigo-600 hover:text-indigo-900 font-medium"
-                  >
-                    Select Cart
-                  </button>
-                  <button
-                    onClick={() => {
-                      // TODO: Implement edit cart
-                      showToast("Edit cart coming soon", "info");
-                    }}
-                    className="text-gray-600 hover:text-gray-900 ml-4"
-                  >
-                    Edit
-                  </button>
+                      disabled={deletingCartId === cart.id}
+                      className="text-red-600 hover:text-red-900 disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
+                    >
+                      <TrashIcon className="h-4 w-4 mr-1" />
+                      {deletingCartId === cart.id ? "Deleting..." : "Delete"}
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))}
