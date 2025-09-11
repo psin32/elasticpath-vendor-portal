@@ -126,7 +126,6 @@ export const CartProvider: React.FC<CartProviderProps> = ({
     setSelectedCartId("");
     setCartData(null);
     Cookies.remove(SELECTED_CART_COOKIE);
-    showToast("Cart deselected", "success");
   }, [showToast]);
 
   const refreshCart = useCallback(async () => {

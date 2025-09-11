@@ -1956,7 +1956,7 @@ export const useEpccApi = (orgId?: string, storeId?: string) => {
         headers["EP-STORE-ID"] = storeId;
       }
       return apiCall(async (client) => {
-        return await client.request.send(
+        const response = await client.request.send(
           `carts?include=items`,
           "GET",
           null,
@@ -1966,6 +1966,7 @@ export const useEpccApi = (orgId?: string, storeId?: string) => {
           "v2",
           headers
         );
+        return response.data.filter((cart: any) => !cart.is_quote);
       }, "Failed to fetch all account carts");
     },
     [apiCall]

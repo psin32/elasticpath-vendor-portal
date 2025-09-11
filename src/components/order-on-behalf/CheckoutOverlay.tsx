@@ -203,9 +203,6 @@ export default function CheckoutOverlay({
           {/* Impersonated User Info */}
           {impersonationData && (
             <div className="bg-blue-50 rounded-lg p-4">
-              <h3 className="text-lg font-medium text-blue-900 mb-2">
-                Ordering for:
-              </h3>
               <div className="text-sm text-blue-800">
                 <p className="font-medium">{impersonationData.name}</p>
                 <p>{impersonationData.email}</p>

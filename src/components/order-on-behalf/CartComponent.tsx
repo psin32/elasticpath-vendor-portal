@@ -9,6 +9,7 @@ import { Cart } from "@elasticpath/js-sdk";
 import { ShoppingCartIcon as ShoppingCartIconSolid } from "@heroicons/react/24/solid";
 import { TrashIcon } from "@heroicons/react/24/outline";
 import CreateCart from "./CreateCart";
+import DeleteCartOverlay from "./DeleteCartOverlay";
 
 interface CartComponentProps {
   selectedAccountToken: string;
@@ -35,6 +36,11 @@ export default function CartComponent({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [deletingCartId, setDeletingCartId] = useState<string | null>(null);
+  const [showDeleteOverlay, setShowDeleteOverlay] = useState(false);
+  const [cartToDelete, setCartToDelete] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
   const { cartData } = useCartContext();
 
   useEffect(() => {
@@ -57,10 +63,8 @@ export default function CartComponent({
         selectedStoreId || ""
       );
 
-      if (response?.data) {
-        const cartsArray = Array.isArray(response.data)
-          ? response.data
-          : [response.data];
+      if (response) {
+        const cartsArray = Array.isArray(response) ? response : [response];
         setCarts(cartsArray);
       } else {
         setCarts([]);
@@ -101,25 +105,24 @@ export default function CartComponent({
     return new Date(dateString).toLocaleString();
   };
 
-  const handleDeleteCart = async (cartId: string, cartName: string) => {
-    if (
-      !window.confirm(
-        `Are you sure you want to delete the cart "${cartName}"? This action cannot be undone.`
-      )
-    ) {
-      return;
-    }
+  const handleDeleteCartClick = (cartId: string, cartName: string) => {
+    setCartToDelete({ id: cartId, name: cartName });
+    setShowDeleteOverlay(true);
+  };
 
-    setDeletingCartId(cartId);
+  const handleDeleteConfirm = async () => {
+    if (!cartToDelete) return;
+
+    setDeletingCartId(cartToDelete.id);
     try {
       await deleteCart(
-        cartId,
+        cartToDelete.id,
         selectedAccountToken,
         selectedOrgId || "",
         selectedStoreId || ""
       );
 
-      showToast(`Cart "${cartName}" deleted successfully`, "success");
+      showToast(`Cart "${cartToDelete.name}" deleted successfully`, "success");
       // Reload carts to reflect the deletion
       await loadCarts();
     } catch (err) {
@@ -129,7 +132,14 @@ export default function CartComponent({
       console.error("Error deleting cart:", err);
     } finally {
       setDeletingCartId(null);
+      setShowDeleteOverlay(false);
+      setCartToDelete(null);
     }
+  };
+
+  const handleDeleteCancel = () => {
+    setShowDeleteOverlay(false);
+    setCartToDelete(null);
   };
 
   if (loading) {
@@ -352,7 +362,7 @@ export default function CartComponent({
                     </button>
                     <button
                       onClick={() =>
-                        handleDeleteCart(
+                        handleDeleteCartClick(
                           cart.id,
                           (cart as any)?.name || "Unnamed Cart"
                         )
@@ -385,6 +395,15 @@ export default function CartComponent({
           </div>
         </div>
       )}
+
+      {/* Delete Cart Overlay */}
+      <DeleteCartOverlay
+        isOpen={showDeleteOverlay}
+        onClose={handleDeleteCancel}
+        onConfirm={handleDeleteConfirm}
+        cartName={cartToDelete?.name || ""}
+        isLoading={deletingCartId === cartToDelete?.id}
+      />
     </div>
   );
 }
