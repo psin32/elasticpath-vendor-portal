@@ -13,6 +13,7 @@ interface CheckoutOverlayProps {
   onClose: () => void;
   selectedAccountToken: string;
   accountId: string;
+  onOrderPlaced?: () => void;
 }
 
 interface AccountAddress {
@@ -38,6 +39,7 @@ export default function CheckoutOverlay({
   onClose,
   selectedAccountToken,
   accountId,
+  onOrderPlaced,
 }: CheckoutOverlayProps) {
   const { selectedOrgId, selectedStoreId } = useDashboard();
   const {
@@ -166,6 +168,10 @@ export default function CheckoutOverlay({
 
       showToast("Order placed successfully!", "success");
       onClose();
+      // Call the callback to switch to orders tab
+      if (onOrderPlaced) {
+        onOrderPlaced();
+      }
     } catch (err) {
       const errorMessage =
         err instanceof Error ? err.message : "Failed to place order";

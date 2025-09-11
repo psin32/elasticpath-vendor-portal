@@ -2386,6 +2386,42 @@ export const useEpccApi = (orgId?: string, storeId?: string) => {
     [apiCall]
   );
 
+  /**
+   * Fetch account orders
+   */
+  const fetchAccountOrders = useCallback(
+    async (
+      accountId: string,
+      accountToken: string,
+      orgId: string,
+      storeId: string
+    ) => {
+      const headers: any = {
+        "EP-Account-Management-Authentication-Token": accountToken,
+      };
+      if (orgId) {
+        headers["EP-ORG-ID"] = orgId;
+      }
+      if (storeId) {
+        headers["EP-STORE-ID"] = storeId;
+      }
+
+      return apiCall(async (client) => {
+        return await client.request.send(
+          `orders?filter=eq(account_id,${accountId})`,
+          "GET",
+          undefined,
+          undefined,
+          client,
+          undefined,
+          "v2",
+          headers
+        );
+      }, "Failed to fetch account orders");
+    },
+    [apiCall]
+  );
+
   // Reset API error when client changes
   useEffect(() => {
     if (isReady) {
@@ -2490,6 +2526,7 @@ export const useEpccApi = (orgId?: string, storeId?: string) => {
     checkoutOrder,
     createManualPayment,
     clearCartItems,
+    fetchAccountOrders,
     // Utility methods
     clearApiError: () => setApiError(null),
     isLoading: clientLoading || apiLoading,

@@ -9,6 +9,7 @@ import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import CartComponent from "@/components/order-on-behalf/CartComponent";
 import ProductsComponent from "@/components/order-on-behalf/ProductsComponent";
 import CartSidebar from "@/components/order-on-behalf/CartSidebar";
+import OrdersComponent from "@/components/order-on-behalf/OrdersComponent";
 import { CartProvider } from "@/contexts/CartContext";
 import Cookies from "js-cookie";
 
@@ -40,7 +41,9 @@ export default function OrderOnBehalfPage() {
   const [impersonationData, setImpersonationData] =
     useState<ImpersonationData | null>(null);
   const [selectedAccountId, setSelectedAccountId] = useState<string>("");
-  const [activeTab, setActiveTab] = useState<"products" | "carts">("carts");
+  const [activeTab, setActiveTab] = useState<"products" | "carts" | "orders">(
+    "carts"
+  );
   const [isCartSidebarOpen, setIsCartSidebarOpen] = useState(true);
   const [cartItemCount, setCartItemCount] = useState(0);
   const [selectedCartId, setSelectedCartId] = useState<string>("");
@@ -129,6 +132,11 @@ export default function OrderOnBehalfPage() {
     // Save new cart ID to cookie
     Cookies.set(SELECTED_CART_COOKIE, cartId, { expires: 7 }); // Expires in 7 days
     showToast("New cart created and selected", "success");
+  };
+
+  const handleOrderPlaced = () => {
+    // Switch to orders tab after successful order placement
+    setActiveTab("orders");
   };
 
   if (loading) {
@@ -268,6 +276,17 @@ export default function OrderOnBehalfPage() {
                   >
                     Browse Products
                   </button>
+
+                  <button
+                    onClick={() => setActiveTab("orders")}
+                    className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                      activeTab === "orders"
+                        ? "border-indigo-500 text-indigo-600"
+                        : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                    }`}
+                  >
+                    Orders
+                  </button>
                 </nav>
               </div>
 
@@ -289,6 +308,13 @@ export default function OrderOnBehalfPage() {
                     onCartCreated={handleCartCreated}
                   />
                 )}
+
+                {activeTab === "orders" && selectedAccount && (
+                  <OrdersComponent
+                    selectedAccountToken={selectedAccount.token}
+                    accountId={selectedAccount.account_id}
+                  />
+                )}
               </div>
             </div>
           </div>
@@ -300,6 +326,7 @@ export default function OrderOnBehalfPage() {
               selectedCartId={selectedCartId}
               onCartCreated={handleCartCreated}
               accountId={selectedAccount.account_id}
+              onOrderPlaced={handleOrderPlaced}
             />
           )}
         </div>

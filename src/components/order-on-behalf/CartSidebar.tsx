@@ -18,12 +18,14 @@ interface CartSidebarProps {
   selectedCartId?: string;
   onCartCreated?: (cartId: string) => void;
   accountId?: string;
+  onOrderPlaced?: () => void;
 }
 
 export default function CartSidebar({
   selectedAccountToken,
   onCartCreated,
   accountId,
+  onOrderPlaced,
 }: CartSidebarProps) {
   const { showToast } = useToast();
   const {
@@ -325,6 +327,7 @@ export default function CartSidebar({
         onClose={() => setShowCheckoutOverlay(false)}
         selectedAccountToken={selectedAccountToken}
         accountId={accountId || ""}
+        onOrderPlaced={onOrderPlaced}
       />
     </div>
   );
