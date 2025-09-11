@@ -1957,7 +1957,7 @@ export const useEpccApi = (orgId?: string, storeId?: string) => {
       }
       return apiCall(async (client) => {
         const response = await client.request.send(
-          `carts?include=items`,
+          `carts?include=items,custom_discounts&page[limit]=100&page[offset]=0`,
           "GET",
           null,
           undefined,
@@ -1993,7 +1993,7 @@ export const useEpccApi = (orgId?: string, storeId?: string) => {
       }
       return apiCall(async (client) => {
         return await client.request.send(
-          `carts/${cartId}/items`,
+          `carts/${cartId}/items?include=custom_discounts`,
           "GET",
           null,
           undefined,
@@ -2003,6 +2003,122 @@ export const useEpccApi = (orgId?: string, storeId?: string) => {
           headers
         );
       }, "Failed to fetch cart by id");
+    },
+    [apiCall]
+  );
+
+  /**
+   * Get full cart details by ID (including cart metadata)
+   */
+  const fetchFullCartDetails = useCallback(
+    async (
+      cartId: string,
+      accountToken: string,
+      orgId: string,
+      storeId: string
+    ) => {
+      const headers: any = {
+        "EP-Account-Management-Authentication-Token": accountToken,
+      };
+      if (orgId) {
+        headers["EP-ORG-ID"] = orgId;
+      }
+      if (storeId) {
+        headers["EP-STORE-ID"] = storeId;
+      }
+      return apiCall(async (client) => {
+        return await client.request.send(
+          `carts/${cartId}?include=items`,
+          "GET",
+          null,
+          undefined,
+          client,
+          undefined,
+          "v2",
+          headers
+        );
+      }, "Failed to fetch full cart details");
+    },
+    [apiCall]
+  );
+
+  /**
+   * Update item custom discount
+   */
+  const updateItemCustomDiscount = useCallback(
+    async (
+      cartId: string,
+      itemId: string,
+      discountData: { amount: string; description: string; username: string },
+      accountToken: string,
+      orgId: string,
+      storeId: string
+    ) => {
+      const headers: any = {
+        "EP-Account-Management-Authentication-Token": accountToken,
+      };
+      if (orgId) {
+        headers["EP-ORG-ID"] = orgId;
+      }
+      if (storeId) {
+        headers["EP-STORE-ID"] = storeId;
+      }
+      return apiCall(async (client) => {
+        return await client.request.send(
+          `carts/${cartId}/items/${itemId}/custom-discounts`,
+          "POST",
+          {
+            type: "custom_discount",
+            external_id: `Applied By - ${discountData.username}`,
+            discount_engine: "CSR Portal",
+            amount: -parseInt(discountData.amount),
+            description: discountData.description,
+            discount_code: "custom_code",
+          },
+          undefined,
+          client,
+          undefined,
+          "v2",
+          headers
+        );
+      }, "Failed to update item custom discount");
+    },
+    [apiCall]
+  );
+
+  /**
+   * Delete item custom discount
+   */
+  const deleteItemCustomDiscount = useCallback(
+    async (
+      cartId: string,
+      itemId: string,
+      customDiscountId: string,
+      accountToken: string,
+      orgId: string,
+      storeId: string
+    ) => {
+      const headers: any = {
+        "EP-Account-Management-Authentication-Token": accountToken,
+      };
+      if (orgId) {
+        headers["EP-ORG-ID"] = orgId;
+      }
+      if (storeId) {
+        headers["EP-STORE-ID"] = storeId;
+      }
+      return apiCall(async (client) => {
+        return await client.request.send(
+          `carts/${cartId}/items/${itemId}/custom-discounts/${customDiscountId}`,
+          "DELETE",
+          undefined,
+          undefined,
+          client,
+          undefined,
+          "v2",
+          headers
+        );
+      }, "Failed to delete item custom discount");
     },
     [apiCall]
   );
@@ -2113,6 +2229,47 @@ export const useEpccApi = (orgId?: string, storeId?: string) => {
           headers
         );
       }, "Failed to create new cart");
+    },
+    [apiCall]
+  );
+
+  /**
+   * Update cart
+   */
+  const updateCartCustomDiscountSettings = useCallback(
+    async (
+      cartId: string,
+      custom_discounts_enabled: boolean,
+      accountToken: string,
+      orgId: string,
+      storeId: string
+    ) => {
+      const headers: any = {
+        "EP-Account-Management-Authentication-Token": accountToken,
+      };
+      if (orgId) {
+        headers["EP-ORG-ID"] = orgId;
+      }
+      if (storeId) {
+        headers["EP-STORE-ID"] = storeId;
+      }
+      return apiCall(async (client) => {
+        return await client.request.send(
+          `carts/${cartId}`,
+          "PUT",
+          {
+            discount_settings: {
+              custom_discounts_enabled: custom_discounts_enabled,
+              use_rule_promotions: !custom_discounts_enabled,
+            },
+          },
+          undefined,
+          client,
+          undefined,
+          "v2",
+          headers
+        );
+      }, "Failed to update cart");
     },
     [apiCall]
   );
@@ -2518,8 +2675,12 @@ export const useEpccApi = (orgId?: string, storeId?: string) => {
     fetchAllAccountCarts,
     fetchAllProducts,
     fetchCartById,
+    fetchFullCartDetails,
     updateCartItemQuantity,
+    updateItemCustomDiscount,
+    deleteItemCustomDiscount,
     createNewCart,
+    updateCartCustomDiscountSettings,
     deleteCart,
     addToCart,
     deleteCartItem,

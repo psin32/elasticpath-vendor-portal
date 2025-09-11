@@ -18,6 +18,7 @@ interface CartContextType {
   // State
   selectedCartId: string;
   cartData: any | null;
+  cartDetails: any | null;
   loading: boolean;
   error: string | null;
 
@@ -29,6 +30,13 @@ interface CartContextType {
   updateItemQuantity: (itemId: string, quantity: number) => Promise<void>;
   removeItemFromCart: (itemId: string) => Promise<void>;
   clearCart: () => Promise<void>;
+  updateCartCustomDiscountSettings: (
+    custom_discounts_enabled: boolean
+  ) => Promise<void>;
+  updateItemCustomDiscount: (
+    itemId: string,
+    discountData: { amount: number; description: string; username: string }
+  ) => Promise<void>;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
@@ -53,15 +61,19 @@ export const CartProvider: React.FC<CartProviderProps> = ({
   const { selectedOrgId, selectedStoreId } = useDashboard();
   const {
     fetchCartById,
+    fetchFullCartDetails,
     updateCartItemQuantity,
     addToCart,
     deleteCartItem,
     clearCartItems,
+    updateCartCustomDiscountSettings: updateCartCustomDiscountSettingsApi,
+    updateItemCustomDiscount: updateItemCustomDiscountApi,
   } = useEpccApi(selectedOrgId || undefined, selectedStoreId || undefined);
   const { showToast } = useToast();
 
   const [selectedCartId, setSelectedCartId] = useState<string>("");
   const [cartData, setCartData] = useState<any>(null);
+  const [cartDetails, setCartDetails] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -94,14 +106,24 @@ export const CartProvider: React.FC<CartProviderProps> = ({
     setError(null);
 
     try {
-      const cart = await fetchCartById(
-        selectedCartId,
-        selectedAccountToken,
-        selectedOrgId || "",
-        selectedStoreId || ""
-      );
+      // Fetch both cart details and items
+      const [cartDetailsResponse, cartItemsResponse] = await Promise.all([
+        fetchFullCartDetails(
+          selectedCartId,
+          selectedAccountToken,
+          selectedOrgId || "",
+          selectedStoreId || ""
+        ),
+        fetchCartById(
+          selectedCartId,
+          selectedAccountToken,
+          selectedOrgId || "",
+          selectedStoreId || ""
+        ),
+      ]);
 
-      setCartData(cart);
+      setCartDetails(cartDetailsResponse);
+      setCartData(cartItemsResponse);
     } catch (err) {
       const errorMessage =
         err instanceof Error ? err.message : "Failed to load cart";
@@ -125,8 +147,9 @@ export const CartProvider: React.FC<CartProviderProps> = ({
   const deselectCart = useCallback(() => {
     setSelectedCartId("");
     setCartData(null);
+    setCartDetails(null);
     Cookies.remove(SELECTED_CART_COOKIE);
-  }, [showToast]);
+  }, []);
 
   const refreshCart = useCallback(async () => {
     if (selectedCartId) {
@@ -270,10 +293,104 @@ export const CartProvider: React.FC<CartProviderProps> = ({
     showToast,
   ]);
 
+  const updateCartCustomDiscountSettings = useCallback(
+    async (custom_discounts_enabled: boolean) => {
+      if (!selectedCartId || !selectedAccountToken) {
+        showToast("No cart selected", "error");
+        return;
+      }
+
+      try {
+        await updateCartCustomDiscountSettingsApi(
+          selectedCartId,
+          custom_discounts_enabled,
+          selectedAccountToken,
+          selectedOrgId!,
+          selectedStoreId!
+        );
+
+        showToast(
+          `Price override ${
+            custom_discounts_enabled ? "enabled" : "disabled"
+          } successfully`,
+          "success"
+        );
+
+        // Refresh cart data to get updated cart details
+        await refreshCart();
+      } catch (err) {
+        const errorMessage =
+          err instanceof Error
+            ? err.message
+            : "Failed to update price override setting";
+        showToast(errorMessage, "error");
+        console.error("Error updating cart custom discount settings:", err);
+      }
+    },
+    [
+      selectedCartId,
+      selectedAccountToken,
+      selectedOrgId,
+      selectedStoreId,
+      updateCartCustomDiscountSettingsApi,
+      refreshCart,
+      showToast,
+    ]
+  );
+
+  const updateItemCustomDiscount = useCallback(
+    async (
+      itemId: string,
+      discountData: { amount: number; description: string; username: string }
+    ) => {
+      if (!selectedCartId || !selectedAccountToken) {
+        showToast("No cart selected", "error");
+        return;
+      }
+
+      try {
+        await updateItemCustomDiscountApi(
+          selectedCartId,
+          itemId,
+          {
+            amount: discountData.amount.toString(),
+            description: discountData.description,
+            username: discountData.username,
+          },
+          selectedAccountToken,
+          selectedOrgId!,
+          selectedStoreId!
+        );
+
+        showToast("Custom discount applied successfully", "success");
+
+        // Refresh cart data to get updated cart details
+        await refreshCart();
+      } catch (err) {
+        const errorMessage =
+          err instanceof Error
+            ? err.message
+            : "Failed to apply custom discount";
+        showToast(errorMessage, "error");
+        console.error("Error applying custom discount:", err);
+      }
+    },
+    [
+      selectedCartId,
+      selectedAccountToken,
+      selectedOrgId,
+      selectedStoreId,
+      updateItemCustomDiscountApi,
+      refreshCart,
+      showToast,
+    ]
+  );
+
   const value: CartContextType = {
     // State
     selectedCartId,
     cartData,
+    cartDetails,
     loading,
     error,
 
@@ -285,6 +402,8 @@ export const CartProvider: React.FC<CartProviderProps> = ({
     updateItemQuantity,
     removeItemFromCart,
     clearCart,
+    updateCartCustomDiscountSettings,
+    updateItemCustomDiscount,
   };
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
