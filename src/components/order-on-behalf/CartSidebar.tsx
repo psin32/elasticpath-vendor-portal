@@ -10,9 +10,12 @@ import {
   TrashIcon,
   PlusIcon,
   MinusIcon,
+  ChevronUpIcon,
 } from "@heroicons/react/24/outline";
 import { ShoppingCartIcon as ShoppingCartIconSolid } from "@heroicons/react/24/solid";
 import CreateCart from "./CreateCart";
+import { Disclosure } from "@headlessui/react";
+import AddCartCustomDiscount from "./AddCartCustomDiscount";
 
 interface CartSidebarProps {
   selectedAccountToken: string;
@@ -38,6 +41,8 @@ export default function CartSidebar({
     updateItemQuantity,
     removeItemFromCart,
     updateCartCustomDiscountSettings,
+    deleteItemCustomDiscount,
+    deleteCartCustomDiscount,
   } = useCartContext();
 
   const [editingQuantity, setEditingQuantity] = useState<string | null>(null);
@@ -45,6 +50,7 @@ export default function CartSidebar({
   const [showCheckoutOverlay, setShowCheckoutOverlay] = useState(false);
   const [togglingDiscount, setTogglingDiscount] = useState(false);
   const [showCustomDiscount, setShowCustomDiscount] = useState(false);
+  const [showCartCustomDiscount, setShowCartCustomDiscount] = useState(false);
   const [selectedItemForDiscount, setSelectedItemForDiscount] = useState<{
     id: string;
     name: string;
@@ -108,9 +114,24 @@ export default function CartSidebar({
     setShowCustomDiscount(true);
   };
 
+  const handleOpenCartCustomDiscount = () => {
+    setShowCartCustomDiscount(true);
+  };
+
+  const handleDeleteCustomDiscount = (
+    itemId: string,
+    customDiscountId: string
+  ) => {
+    deleteItemCustomDiscount(itemId, customDiscountId);
+  };
+
   const handleCloseCustomDiscount = () => {
     setShowCustomDiscount(false);
     setSelectedItemForDiscount(null);
+  };
+
+  const handleCloseCartCustomDiscount = () => {
+    setShowCartCustomDiscount(false);
   };
 
   const handleTogglePriceOverride = async () => {
@@ -224,29 +245,6 @@ export default function CartSidebar({
                   </p>
                 )}
               </div>
-
-              <div className="grid grid-cols-2 gap-4 text-xs">
-                <div>
-                  <span className="text-gray-500">Created:</span>
-                  <div className="text-gray-900">
-                    {cartDetails.data.meta?.timestamps?.created_at
-                      ? new Date(
-                          cartDetails.data.meta.timestamps.created_at
-                        ).toLocaleDateString()
-                      : "N/A"}
-                  </div>
-                </div>
-                <div>
-                  <span className="text-gray-500">Updated:</span>
-                  <div className="text-gray-900">
-                    {cartDetails.data.meta?.timestamps?.updated_at
-                      ? new Date(
-                          cartDetails.data.meta.timestamps.updated_at
-                        ).toLocaleDateString()
-                      : "N/A"}
-                  </div>
-                </div>
-              </div>
             </div>
           </div>
         )}
@@ -273,6 +271,63 @@ export default function CartSidebar({
                   {cartData.meta.display_price.discount?.formatted}
                 </span>
               </div>
+              <div>
+                {cartDetails?.included.custom_discounts?.length > 0 && (
+                  <Disclosure as="div" className="w-full" defaultOpen>
+                    {({ open }) => (
+                      <>
+                        <div className="flex justify-between text-xs">
+                          <dt>
+                            <Disclosure.Button
+                              className={`${
+                                cartDetails.included.custom_discounts
+                                  ? "cursor-pointer"
+                                  : "cursor-auto"
+                              } flex`}
+                            >
+                              {cartDetails?.included.custom_discounts && (
+                                <ChevronUpIcon
+                                  className={`${
+                                    open
+                                      ? "rotate-180 transform"
+                                      : "rotate-90 transform"
+                                  } h-3 w-3 text-black mr-1 mt-1`}
+                                />
+                              )}
+                              Custom Discount
+                            </Disclosure.Button>
+                          </dt>
+                        </div>
+                        <Disclosure.Panel className="text-xs">
+                          {cartDetails.included.custom_discounts?.map(
+                            (discount: any) => {
+                              return (
+                                <div
+                                  className="flex justify-between mt-4"
+                                  key={discount.id}
+                                >
+                                  <div className="flex justify-between gap-4">
+                                    <span>
+                                      <TrashIcon
+                                        className="h-4 w-4 text-red-600 hover:text-red-400 cursor-pointer"
+                                        onClick={() =>
+                                          deleteCartCustomDiscount(discount.id)
+                                        }
+                                      />
+                                    </span>
+                                    {discount.description}
+                                  </div>
+                                  <div>{discount.amount.formatted}</div>
+                                </div>
+                              );
+                            }
+                          )}
+                        </Disclosure.Panel>
+                      </>
+                    )}
+                  </Disclosure>
+                )}
+              </div>
               <div className="flex justify-between text-lg font-medium">
                 <span className="text-gray-900">Total</span>
                 <span className="text-gray-900">
@@ -280,6 +335,16 @@ export default function CartSidebar({
                 </span>
               </div>
             </div>
+            {cartDetails?.data?.discount_settings?.custom_discounts_enabled && (
+              <div className="mt-1">
+                <button
+                  onClick={handleOpenCartCustomDiscount}
+                  className="text-xs text-indigo-600 hover:text-indigo-800 underline"
+                >
+                  Add Cart Level Discount
+                </button>
+              </div>
+            )}
           </div>
         )}
         {/* Content */}
@@ -383,44 +448,6 @@ export default function CartSidebar({
                             </div>
                           )}
 
-                          {/* Custom Discount Display */}
-                          {item.relationships?.custom_discounts?.data && (
-                            <div className="mt-2">
-                              {item.relationships.custom_discounts.data.map(
-                                (discountRef: any) => {
-                                  const customDiscount =
-                                    cartData?.included?.custom_discounts?.find(
-                                      (cd: any) => cd.id === discountRef.id
-                                    );
-                                  if (customDiscount) {
-                                    return (
-                                      <div
-                                        key={customDiscount.id}
-                                        className="bg-green-50 border border-green-200 rounded-md p-2 mt-1"
-                                      >
-                                        <div className="flex items-center justify-between">
-                                          <div>
-                                            <p className="text-xs text-green-700">
-                                              {customDiscount.description}
-                                            </p>
-                                          </div>
-                                          <div className="text-xs font-semibold text-green-800">
-                                            {customDiscount.amount?.formatted ||
-                                              `$${
-                                                (customDiscount.amount
-                                                  ?.amount || 0) / 100
-                                              }`}
-                                          </div>
-                                        </div>
-                                      </div>
-                                    );
-                                  }
-                                  return null;
-                                }
-                              )}
-                            </div>
-                          )}
-
                           <div className="flex items-center space-x-2 mt-4 mb-4">
                             <button
                               onClick={() =>
@@ -466,6 +493,73 @@ export default function CartSidebar({
                               <PlusIcon className="h-4 w-4" />
                             </button>
                           </div>
+                          {item.relationships?.custom_discounts?.data?.length >
+                            0 && (
+                            <Disclosure as="div" className="w-full" defaultOpen>
+                              {({ open }) => (
+                                <>
+                                  <div className="flex justify-between">
+                                    <dt>
+                                      <Disclosure.Button
+                                        className={`${
+                                          item.relationships?.custom_discounts
+                                            ?.data?.length > 0
+                                            ? "cursor-pointer"
+                                            : "cursor-auto"
+                                        } flex text-xs`}
+                                      >
+                                        {item.relationships?.custom_discounts
+                                          ?.data?.length > 0 && (
+                                          <ChevronUpIcon
+                                            className={`${
+                                              open
+                                                ? "rotate-180 transform"
+                                                : "rotate-90 transform"
+                                            } h-3 w-3 text-black mr-1 mt-1`}
+                                          />
+                                        )}
+                                        Item Discounts
+                                      </Disclosure.Button>
+                                    </dt>
+                                  </div>
+                                  <Disclosure.Panel className="text-xs">
+                                    {item?.relationships?.custom_discounts?.data?.map(
+                                      (discount: any) => {
+                                        const details =
+                                          cartData?.included?.custom_discounts?.find(
+                                            (cd: any) => cd.id === discount.id
+                                          );
+                                        return (
+                                          <div
+                                            className="flex justify-between mt-4"
+                                            key={details.id}
+                                          >
+                                            <div className="flex justify-between gap-4">
+                                              <span>
+                                                <TrashIcon
+                                                  className="h-4 w-4 text-red-600 hover:text-red-400 cursor-pointer"
+                                                  onClick={() =>
+                                                    handleDeleteCustomDiscount(
+                                                      item.id,
+                                                      details.id
+                                                    )
+                                                  }
+                                                />
+                                              </span>
+                                              {details.description}
+                                            </div>
+                                            <div>
+                                              {details.amount?.formatted}
+                                            </div>
+                                          </div>
+                                        );
+                                      }
+                                    )}
+                                  </Disclosure.Panel>
+                                </>
+                              )}
+                            </Disclosure>
+                          )}
                         </div>
                         <div className="flex-shrink-0">
                           <div className="flex gap-2 flex-col items-end">
@@ -524,6 +618,14 @@ export default function CartSidebar({
           sku={selectedItemForDiscount.sku}
           isOpen={showCustomDiscount}
           onClose={handleCloseCustomDiscount}
+        />
+      )}
+
+      {/* Cart Custom Discount Overlay */}
+      {showCartCustomDiscount && (
+        <AddCartCustomDiscount
+          isOpen={showCartCustomDiscount}
+          onClose={handleCloseCartCustomDiscount}
         />
       )}
     </div>

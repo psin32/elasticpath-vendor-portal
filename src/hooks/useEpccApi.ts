@@ -11,6 +11,7 @@ import type {
   UserAuthenticationPasswordProfileBody,
 } from "@elasticpath/js-sdk";
 import { v4 as uuidv4 } from "uuid";
+import { useToast } from "@/contexts/ToastContext";
 
 /**
  * Enhanced hook for EPCC API interactions with error handling and loading states
@@ -24,6 +25,7 @@ export const useEpccApi = (orgId?: string, storeId?: string) => {
   } = useEpccClientWithState(orgId, storeId);
   const [apiLoading, setApiLoading] = useState(false);
   const [apiError, setApiError] = useState<string | null>(null);
+  const { showToast } = useToast();
 
   /**
    * Generic API call wrapper with error handling
@@ -2028,7 +2030,7 @@ export const useEpccApi = (orgId?: string, storeId?: string) => {
       }
       return apiCall(async (client) => {
         return await client.request.send(
-          `carts/${cartId}?include=items`,
+          `carts/${cartId}?include=items,custom_discounts`,
           "GET",
           null,
           undefined,
@@ -2038,6 +2040,85 @@ export const useEpccApi = (orgId?: string, storeId?: string) => {
           headers
         );
       }, "Failed to fetch full cart details");
+    },
+    [apiCall]
+  );
+
+  /**
+   * Update cart custom discount
+   */
+  const updateCartCustomDiscount = useCallback(
+    async (
+      cartId: string,
+      discountData: { amount: string; description: string; username: string },
+      accountToken: string,
+      orgId: string,
+      storeId: string
+    ) => {
+      const headers: any = {
+        "EP-Account-Management-Authentication-Token": accountToken,
+      };
+      if (orgId) {
+        headers["EP-ORG-ID"] = orgId;
+      }
+      if (storeId) {
+        headers["EP-STORE-ID"] = storeId;
+      }
+      return apiCall(async (client) => {
+        return await client.request.send(
+          `carts/${cartId}/custom-discounts`,
+          "POST",
+          {
+            type: "custom_discount",
+            external_id: `Applied By - ${discountData.username}`,
+            discount_engine: "CSR Portal",
+            amount: -parseInt(discountData.amount),
+            description: discountData.description,
+            discount_code: "custom_code",
+          },
+          undefined,
+          client,
+          undefined,
+          "v2",
+          headers
+        );
+      }, "Failed to update cart custom discount");
+    },
+    [apiCall]
+  );
+
+  /**
+   * Delete cart custom discount
+   */
+  const deleteCartCustomDiscount = useCallback(
+    async (
+      cartId: string,
+      customDiscountId: string,
+      accountToken: string,
+      orgId: string,
+      storeId: string
+    ) => {
+      const headers: any = {
+        "EP-Account-Management-Authentication-Token": accountToken,
+      };
+      if (orgId) {
+        headers["EP-ORG-ID"] = orgId;
+      }
+      if (storeId) {
+        headers["EP-STORE-ID"] = storeId;
+      }
+      return apiCall(async (client) => {
+        return await client.request.send(
+          `carts/${cartId}/custom-discounts/${customDiscountId}`,
+          "DELETE",
+          undefined,
+          undefined,
+          client,
+          undefined,
+          "v2",
+          headers
+        );
+      }, "Failed to delete cart custom discount");
     },
     [apiCall]
   );
@@ -2254,21 +2335,26 @@ export const useEpccApi = (orgId?: string, storeId?: string) => {
         headers["EP-STORE-ID"] = storeId;
       }
       return apiCall(async (client) => {
-        return await client.request.send(
-          `carts/${cartId}`,
-          "PUT",
-          {
-            discount_settings: {
-              custom_discounts_enabled: custom_discounts_enabled,
-              use_rule_promotions: !custom_discounts_enabled,
+        return await client.request
+          .send(
+            `carts/${cartId}`,
+            "PUT",
+            {
+              discount_settings: {
+                custom_discounts_enabled: custom_discounts_enabled,
+                use_rule_promotions: !custom_discounts_enabled,
+              },
             },
-          },
-          undefined,
-          client,
-          undefined,
-          "v2",
-          headers
-        );
+            undefined,
+            client,
+            undefined,
+            "v2",
+            headers
+          )
+          .catch((err) => {
+            console.error("Error updating cart custom discount settings:", err);
+            return err;
+          });
       }, "Failed to update cart");
     },
     [apiCall]
@@ -2679,6 +2765,8 @@ export const useEpccApi = (orgId?: string, storeId?: string) => {
     updateCartItemQuantity,
     updateItemCustomDiscount,
     deleteItemCustomDiscount,
+    updateCartCustomDiscount,
+    deleteCartCustomDiscount,
     createNewCart,
     updateCartCustomDiscountSettings,
     deleteCart,

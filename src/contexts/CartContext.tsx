@@ -37,6 +37,16 @@ interface CartContextType {
     itemId: string,
     discountData: { amount: number; description: string; username: string }
   ) => Promise<void>;
+  deleteItemCustomDiscount: (
+    itemId: string,
+    customDiscountId: string
+  ) => Promise<void>;
+  updateCartCustomDiscount: (discountData: {
+    amount: number;
+    description: string;
+    username: string;
+  }) => Promise<void>;
+  deleteCartCustomDiscount: (customDiscountId: string) => Promise<void>;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
@@ -68,6 +78,9 @@ export const CartProvider: React.FC<CartProviderProps> = ({
     clearCartItems,
     updateCartCustomDiscountSettings: updateCartCustomDiscountSettingsApi,
     updateItemCustomDiscount: updateItemCustomDiscountApi,
+    deleteItemCustomDiscount: deleteItemCustomDiscountApi,
+    updateCartCustomDiscount: updateCartCustomDiscountApi,
+    deleteCartCustomDiscount: deleteCartCustomDiscountApi,
   } = useEpccApi(selectedOrgId || undefined, selectedStoreId || undefined);
   const { showToast } = useToast();
 
@@ -301,7 +314,7 @@ export const CartProvider: React.FC<CartProviderProps> = ({
       }
 
       try {
-        await updateCartCustomDiscountSettingsApi(
+        const result = await updateCartCustomDiscountSettingsApi(
           selectedCartId,
           custom_discounts_enabled,
           selectedAccountToken,
@@ -309,15 +322,18 @@ export const CartProvider: React.FC<CartProviderProps> = ({
           selectedStoreId!
         );
 
-        showToast(
-          `Price override ${
-            custom_discounts_enabled ? "enabled" : "disabled"
-          } successfully`,
-          "success"
-        );
-
-        // Refresh cart data to get updated cart details
-        await refreshCart();
+        if (result.status) {
+          showToast(result.detail, "error");
+        } else {
+          showToast(
+            `Price override ${
+              custom_discounts_enabled ? "enabled" : "disabled"
+            } successfully`,
+            "success"
+          );
+          // Refresh cart data to get updated cart details
+          await refreshCart();
+        }
       } catch (err) {
         const errorMessage =
           err instanceof Error
@@ -386,6 +402,135 @@ export const CartProvider: React.FC<CartProviderProps> = ({
     ]
   );
 
+  const deleteItemCustomDiscount = useCallback(
+    async (itemId: string, customDiscountId: string) => {
+      if (!selectedCartId || !selectedAccountToken) {
+        showToast("No cart selected", "error");
+        return;
+      }
+
+      try {
+        await deleteItemCustomDiscountApi(
+          selectedCartId,
+          itemId,
+          customDiscountId,
+          selectedAccountToken,
+          selectedOrgId!,
+          selectedStoreId!
+        );
+
+        showToast("Custom discount deleted successfully", "success");
+
+        // Refresh cart data to get updated cart details
+        await refreshCart();
+      } catch (err) {
+        const errorMessage =
+          err instanceof Error
+            ? err.message
+            : "Failed to delete custom discount";
+        showToast(errorMessage, "error");
+        console.error("Error deleting custom discount:", err);
+      }
+    },
+    [
+      selectedCartId,
+      selectedAccountToken,
+      selectedOrgId,
+      selectedStoreId,
+      deleteItemCustomDiscountApi,
+      refreshCart,
+      showToast,
+    ]
+  );
+
+  const updateCartCustomDiscount = useCallback(
+    async (discountData: {
+      amount: number;
+      description: string;
+      username: string;
+    }) => {
+      if (!selectedCartId || !selectedAccountToken) {
+        showToast("No cart selected", "error");
+        return;
+      }
+
+      try {
+        await updateCartCustomDiscountApi(
+          selectedCartId,
+          {
+            amount: discountData.amount.toString(),
+            description: discountData.description,
+            username: discountData.username,
+          },
+          selectedAccountToken,
+          selectedOrgId!,
+          selectedStoreId!
+        );
+
+        showToast("Cart custom discount applied successfully", "success");
+
+        // Refresh cart data to get updated cart details
+        await refreshCart();
+      } catch (err) {
+        const errorMessage =
+          err instanceof Error
+            ? err.message
+            : "Failed to apply cart custom discount";
+        showToast(errorMessage, "error");
+        console.error("Error applying cart custom discount:", err);
+      }
+    },
+    [
+      selectedCartId,
+      selectedAccountToken,
+      selectedOrgId,
+      selectedStoreId,
+      updateCartCustomDiscountApi,
+      refreshCart,
+      showToast,
+    ]
+  );
+
+  const deleteCartCustomDiscount = useCallback(
+    async (customDiscountId: string) => {
+      if (!selectedCartId || !selectedAccountToken) {
+        showToast("No cart selected", "error");
+        return;
+      }
+
+      try {
+        await deleteCartCustomDiscountApi(
+          selectedCartId,
+          customDiscountId,
+          selectedAccountToken,
+          selectedOrgId!,
+          selectedStoreId!
+        );
+
+        showToast("Cart custom discount deleted successfully", "success");
+
+        // Refresh cart data to get updated cart details
+        await refreshCart();
+      } catch (err) {
+        const errorMessage =
+          err instanceof Error
+            ? err.message
+            : "Failed to delete cart custom discount";
+        showToast(errorMessage, "error");
+        console.error("Error deleting cart custom discount:", err);
+      }
+    },
+    [
+      selectedCartId,
+      selectedAccountToken,
+      selectedOrgId,
+      selectedStoreId,
+      deleteCartCustomDiscountApi,
+      refreshCart,
+      showToast,
+    ]
+  );
+
   const value: CartContextType = {
     // State
     selectedCartId,
@@ -404,6 +549,9 @@ export const CartProvider: React.FC<CartProviderProps> = ({
     clearCart,
     updateCartCustomDiscountSettings,
     updateItemCustomDiscount,
+    deleteItemCustomDiscount,
+    updateCartCustomDiscount,
+    deleteCartCustomDiscount,
   };
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
