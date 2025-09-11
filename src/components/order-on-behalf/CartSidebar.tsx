@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useDashboard } from "@/hooks/useDashboard";
+import { useState } from "react";
 import { useToast } from "@/contexts/ToastContext";
 import { useCartContext } from "@/contexts/CartContext";
+import CheckoutOverlay from "./CheckoutOverlay";
 import {
   ShoppingCartIcon,
   TrashIcon,
@@ -17,12 +17,13 @@ interface CartSidebarProps {
   selectedAccountToken: string;
   selectedCartId?: string;
   onCartCreated?: (cartId: string) => void;
+  accountId?: string;
 }
 
 export default function CartSidebar({
   selectedAccountToken,
-  selectedCartId,
   onCartCreated,
+  accountId,
 }: CartSidebarProps) {
   const { showToast } = useToast();
   const {
@@ -37,6 +38,7 @@ export default function CartSidebar({
 
   const [editingQuantity, setEditingQuantity] = useState<string | null>(null);
   const [tempQuantity, setTempQuantity] = useState<string>("");
+  const [showCheckoutOverlay, setShowCheckoutOverlay] = useState(false);
 
   const handleQuantityChange = async (itemId: string, newQuantity: number) => {
     if (newQuantity < 1) return;
@@ -77,7 +79,7 @@ export default function CartSidebar({
   };
 
   const handleCheckout = () => {
-    showToast("Checkout functionality coming soon", "info");
+    setShowCheckoutOverlay(true);
   };
 
   const handleCartCreated = (cartId: string) => {
@@ -316,6 +318,14 @@ export default function CartSidebar({
           )}
         </div>
       </div>
+
+      {/* Checkout Overlay */}
+      <CheckoutOverlay
+        isOpen={showCheckoutOverlay}
+        onClose={() => setShowCheckoutOverlay(false)}
+        selectedAccountToken={selectedAccountToken}
+        accountId={accountId || ""}
+      />
     </div>
   );
 }

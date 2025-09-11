@@ -4,12 +4,10 @@ import { useCallback, useEffect, useState } from "react";
 import { useEpccClientWithState } from "./useEpccClient";
 import { useAuth } from "../contexts/AuthContext";
 import type {
+  Address,
+  CheckoutCustomerObject,
   CustomApiBase,
   ElasticPath,
-  FileBase,
-  PasswordProfileBody,
-  PcmProductAttachmentBody,
-  PriceBookFilter,
   UserAuthenticationPasswordProfileBody,
 } from "@elasticpath/js-sdk";
 import { v4 as uuidv4 } from "uuid";
@@ -2230,6 +2228,164 @@ export const useEpccApi = (orgId?: string, storeId?: string) => {
     [apiCall]
   );
 
+  /**
+   * Get account addresses
+   */
+  const getAccountAddresses = useCallback(
+    async (
+      accountToken: string,
+      accountId: string,
+      orgId: string,
+      storeId: string
+    ) => {
+      const headers: any = {
+        "EP-Account-Management-Authentication-Token": accountToken,
+      };
+      if (orgId) {
+        headers["EP-ORG-ID"] = orgId;
+      }
+      if (storeId) {
+        headers["EP-STORE-ID"] = storeId;
+      }
+      return apiCall(async (client) => {
+        return await client.request.send(
+          `accounts/${accountId}/addresses`,
+          "GET",
+          undefined,
+          undefined,
+          client,
+          undefined,
+          "v2",
+          headers
+        );
+      }, "Failed to get account addresses");
+    },
+    [apiCall]
+  );
+
+  /**
+   * Checkout order
+   */
+  const checkoutOrder = useCallback(
+    async (
+      cartId: string,
+      contact: CheckoutCustomerObject,
+      shippingAddress: Partial<Address>,
+      billingAddress: Partial<Address>,
+      accountToken: string,
+      orgId: string,
+      storeId: string,
+      purchaseOrderNumber?: string
+    ) => {
+      const headers: any = {
+        "EP-Account-Management-Authentication-Token": accountToken,
+      };
+      if (orgId) {
+        headers["EP-ORG-ID"] = orgId;
+      }
+      if (storeId) {
+        headers["EP-STORE-ID"] = storeId;
+      }
+      const body = {
+        contact,
+        shipping_address: shippingAddress,
+        billing_address: billingAddress,
+        purchase_order_number: purchaseOrderNumber,
+      };
+      if (purchaseOrderNumber) {
+        body.purchase_order_number = purchaseOrderNumber;
+      }
+      return apiCall(async (client) => {
+        return await client.request.send(
+          `carts/${cartId}/checkout`,
+          "POST",
+          body,
+          undefined,
+          client,
+          undefined,
+          "v2",
+          headers
+        );
+      }, "Failed to checkout order");
+    },
+    [apiCall]
+  );
+
+  /**
+   * Create manual payment
+   */
+  const createManualPayment = useCallback(
+    async (
+      orderId: string,
+      accountToken: string,
+      orgId: string,
+      storeId: string
+    ) => {
+      const headers: any = {
+        "EP-Account-Management-Authentication-Token": accountToken,
+      };
+      if (orgId) {
+        headers["EP-ORG-ID"] = orgId;
+      }
+      if (storeId) {
+        headers["EP-STORE-ID"] = storeId;
+      }
+      const body = {
+        gateway: "manual",
+        method: "authorize",
+      };
+
+      return apiCall(async (client) => {
+        return await client.request.send(
+          `orders/${orderId}/payments`,
+          "POST",
+          body,
+          undefined,
+          client,
+          undefined,
+          "v2",
+          headers
+        );
+      }, "Failed to create manual payment");
+    },
+    [apiCall]
+  );
+
+  /**
+   * Clear cart items
+   */
+  const clearCartItems = useCallback(
+    async (
+      cartId: string,
+      accountToken: string,
+      orgId: string,
+      storeId: string
+    ) => {
+      const headers: any = {
+        "EP-Account-Management-Authentication-Token": accountToken,
+      };
+      if (orgId) {
+        headers["EP-ORG-ID"] = orgId;
+      }
+      if (storeId) {
+        headers["EP-STORE-ID"] = storeId;
+      }
+      return apiCall(async (client) => {
+        return await client.request.send(
+          `carts/${cartId}/items`,
+          "DELETE",
+          undefined,
+          undefined,
+          client,
+          undefined,
+          "v2",
+          headers
+        );
+      }, "Failed to clear cart items");
+    },
+    [apiCall]
+  );
+
   // Reset API error when client changes
   useEffect(() => {
     if (isReady) {
@@ -2330,7 +2486,10 @@ export const useEpccApi = (orgId?: string, storeId?: string) => {
     deleteCart,
     addToCart,
     deleteCartItem,
-
+    getAccountAddresses,
+    checkoutOrder,
+    createManualPayment,
+    clearCartItems,
     // Utility methods
     clearApiError: () => setApiError(null),
     isLoading: clientLoading || apiLoading,

@@ -28,6 +28,7 @@ interface CartContextType {
   addItemToCart: (productId: string, quantity: number) => Promise<void>;
   updateItemQuantity: (itemId: string, quantity: number) => Promise<void>;
   removeItemFromCart: (itemId: string) => Promise<void>;
+  clearCart: () => Promise<void>;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
@@ -50,8 +51,13 @@ export const CartProvider: React.FC<CartProviderProps> = ({
   selectedAccountToken,
 }) => {
   const { selectedOrgId, selectedStoreId } = useDashboard();
-  const { fetchCartById, updateCartItemQuantity, addToCart, deleteCartItem } =
-    useEpccApi(selectedOrgId || undefined, selectedStoreId || undefined);
+  const {
+    fetchCartById,
+    updateCartItemQuantity,
+    addToCart,
+    deleteCartItem,
+    clearCartItems,
+  } = useEpccApi(selectedOrgId || undefined, selectedStoreId || undefined);
   const { showToast } = useToast();
 
   const [selectedCartId, setSelectedCartId] = useState<string>("");
@@ -236,6 +242,35 @@ export const CartProvider: React.FC<CartProviderProps> = ({
     [selectedCartId, selectedAccountToken, refreshCart, showToast]
   );
 
+  const clearCart = useCallback(async () => {
+    if (!selectedCartId || !selectedAccountToken) {
+      return;
+    }
+
+    try {
+      await clearCartItems(
+        selectedCartId,
+        selectedAccountToken,
+        selectedOrgId!,
+        selectedStoreId!
+      );
+      // Refresh cart data to show empty cart
+      await refreshCart();
+    } catch (err) {
+      const errorMessage =
+        err instanceof Error ? err.message : "Failed to clear cart";
+      showToast(errorMessage, "error");
+    }
+  }, [
+    selectedCartId,
+    selectedAccountToken,
+    selectedOrgId,
+    selectedStoreId,
+    clearCartItems,
+    refreshCart,
+    showToast,
+  ]);
+
   const value: CartContextType = {
     // State
     selectedCartId,
@@ -250,6 +285,7 @@ export const CartProvider: React.FC<CartProviderProps> = ({
     addItemToCart,
     updateItemQuantity,
     removeItemFromCart,
+    clearCart,
   };
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
