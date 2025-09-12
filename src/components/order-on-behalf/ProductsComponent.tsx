@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import { useEpccApi } from "@/hooks/useEpccApi";
 import { useToast } from "@/contexts/ToastContext";
 import { useCartContext } from "@/contexts/CartContext";
@@ -22,7 +23,7 @@ export default function ProductsComponent({
   selectedOrgId,
   selectedStoreId,
 }: ProductsComponentProps) {
-  const { fetchAllProducts } = useEpccApi(
+  const { fetchAllProducts, fetchProductByIds } = useEpccApi(
     selectedOrgId || undefined,
     selectedStoreId || undefined
   );
@@ -35,6 +36,7 @@ export default function ProductsComponent({
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [cartItems, setCartItems] = useState<Record<string, number>>({});
+  const [childItems, setChildItems] = useState<any>([]);
 
   useEffect(() => {
     if (selectedAccountToken && selectedOrgId && selectedStoreId) {
@@ -112,6 +114,70 @@ export default function ProductsComponent({
     }
 
     await addItemToCart(productId, currentQuantity);
+  };
+
+  const handleInputChange = (productId: string, quantity: number) => {
+    setCartItems((prev) => ({
+      ...prev,
+      [productId]: Math.max(0, quantity),
+    }));
+  };
+
+  // Simple Price component
+  const Price = ({
+    price,
+    currency,
+    size = "text-lg",
+  }: {
+    price: string;
+    currency: string;
+    size?: string;
+  }) => <span className={`${size} font-semibold text-gray-900`}>{price}</span>;
+
+  // Simple StrikePrice component
+  const StrikePrice = ({
+    price,
+    currency,
+    size = "text-sm",
+  }: {
+    price: string;
+    currency: string;
+    size?: string;
+  }) => <span className={`${size} text-gray-500 line-through`}>{price}</span>;
+
+  const extractValues = (obj: any) => {
+    let values: any = [];
+
+    const recurse = (currentObj: any) => {
+      if (typeof currentObj === "object" && currentObj !== null) {
+        if (Array.isArray(currentObj)) {
+          currentObj.forEach((item) => recurse(item));
+        } else {
+          Object.values(currentObj).forEach((value) => recurse(value));
+        }
+      } else {
+        values.push(currentObj);
+      }
+    };
+
+    recurse(obj);
+    return values;
+  };
+
+  const getVariants = async (productId: string, variationMatrix: any) => {
+    const productIds = extractValues(variationMatrix);
+    const newItems: any = childItems.slice();
+    const items = await fetchProductByIds(
+      selectedAccountToken,
+      selectedOrgId || "",
+      selectedStoreId || "",
+      productIds
+    );
+    newItems.push({
+      productId,
+      items,
+    });
+    setChildItems(newItems);
   };
 
   if (loading) {
@@ -265,10 +331,10 @@ export default function ProductsComponent({
               meta: {
                 display_price,
                 original_display_price,
-                child_variations,
                 sale_id,
+                variation_matrix,
               },
-              attributes: { name, slug, sku, description },
+              attributes: { name, slug, sku, description, components },
               id,
             } = product;
 
@@ -279,156 +345,363 @@ export default function ProductsComponent({
             const quantity = cartItems[product.id] || 0;
             const productImage = getProductImage(product);
 
+            const child = childItems.find((item: any) => item.productId === id)
+              ?.items?.data;
+
+            const main_images = childItems.find(
+              (item: any) => item.productId === id
+            )?.items?.included?.main_images;
+
             return (
-              <div
-                key={product.id}
-                className="grid grid-cols-12 gap-4 items-center p-4 border rounded shadow-sm relative"
-              >
-                {quantity > 0 && (
-                  <CheckCircleIcon className="w-6 h-6 text-green-500 absolute top-0 left-0 z-10" />
-                )}
-
-                {/* Product Image */}
-                <div className="col-span-1">
-                  {productImage && (
-                    <img
-                      src={productImage}
-                      alt={name}
-                      className="w-20 h-24 object-cover transition duration-300 ease-in-out group-hover:scale-105 hover:scale-105"
-                    />
+              <>
+                <div
+                  key={product.id}
+                  className="grid grid-cols-12 gap-4 items-center p-4 border rounded shadow-sm relative"
+                >
+                  {quantity > 0 && (
+                    <CheckCircleIcon className="w-6 h-6 text-green-500 absolute top-0 left-0 z-10" />
                   )}
-                </div>
 
-                {/* Product Details */}
-                <div className="col-span-5">
-                  <h2 className="text-lg text-gray-800 font-semibold hover:text-indigo-600">
-                    {name}
-                  </h2>
-                  <div className="text-gray-600 text-sm">{sku}</div>
-                  <span
-                    className="mt-2 line-clamp-6 text-xs font-medium leading-5 text-gray-500"
-                    dangerouslySetInnerHTML={{
-                      __html:
-                        description?.length > 200
-                          ? `${description?.substring(0, 200)}...`
-                          : description,
-                    }}
-                  />
-                </div>
-
-                {/* Price */}
-                <div className="col-span-2 font-normal flex flex-col">
-                  <div className="flex items-center">
-                    {currencyPrice && (
-                      <div
-                        className={`mt-1 flex items-center mr-2 ${
-                          original_display_price
-                            ? "text-red-500"
-                            : "text-gray-600"
-                        }`}
-                      >
-                        <span className="text-lg">{currencyPrice}</span>
-                      </div>
+                  {/* Product Image */}
+                  <div className="col-span-1">
+                    {productImage && (
+                      <img
+                        src={productImage}
+                        alt={name}
+                        className="w-20 h-24 object-cover transition duration-300 ease-in-out group-hover:scale-105 hover:scale-105"
+                      />
                     )}
+                  </div>
+
+                  {/* Product Details */}
+                  <div className="col-span-5">
+                    <h2 className="text-lg text-gray-800 font-semibold hover:text-indigo-600">
+                      {name}
+                    </h2>
+                    <div className="text-gray-600 text-sm">{sku}</div>
+                    <span
+                      className="mt-2 line-clamp-6 text-xs font-medium leading-5 text-gray-500"
+                      dangerouslySetInnerHTML={{
+                        __html:
+                          description?.length > 200
+                            ? `${description?.substring(0, 200)}...`
+                            : description,
+                      }}
+                    />
+                  </div>
+
+                  {/* Price */}
+                  <div className="col-span-2 font-normal flex flex-col">
+                    <div className="flex items-center">
+                      {currencyPrice && (
+                        <div
+                          className={`mt-1 flex items-center mr-2 ${
+                            original_display_price
+                              ? "text-red-500"
+                              : "text-gray-600"
+                          }`}
+                        >
+                          <span className="text-lg">{currencyPrice}</span>
+                        </div>
+                      )}
+                      {original_display_price && (
+                        <div className="mt-1 flex items-center">
+                          <span className="text-xs text-gray-600 line-through">
+                            {original_display_price?.without_tax?.formatted
+                              ? original_display_price?.without_tax?.formatted
+                              : original_display_price.with_tax.formatted}
+                          </span>
+                        </div>
+                      )}
+                    </div>
                     {original_display_price && (
-                      <div className="mt-1 flex items-center">
-                        <span className="text-xs text-gray-600 line-through">
-                          {original_display_price?.without_tax?.formatted
-                            ? original_display_price?.without_tax?.formatted
-                            : original_display_price.with_tax.formatted}
-                        </span>
-                      </div>
+                      <span className="mt-2 inline-flex items-center rounded-sm bg-white px-2 py-1 text-xs font-medium text-pink-700 ring-1 ring-inset ring-pink-700 mb-6 mr-2">
+                        {sale_id}
+                      </span>
                     )}
                   </div>
-                  {original_display_price && (
-                    <span className="mt-2 inline-flex items-center rounded-sm bg-white px-2 py-1 text-xs font-medium text-pink-700 ring-1 ring-inset ring-pink-700 mb-6 mr-2">
-                      {sale_id}
-                    </span>
-                  )}
-                </div>
 
-                {/* Quantity Controls */}
-                <div className="col-span-2">
-                  <div className="flex w-32 items-start rounded-lg border border-black/10">
-                    <button
-                      type="submit"
-                      onClick={() =>
-                        handleQuantityChange(product.id, quantity - 1)
-                      }
-                      className="ease flex w-9 h-9 mt-1 justify-center items-center transition-all duration-200"
-                    >
-                      <MinusIcon className="h-4 w-4 text-gray-500" />
-                    </button>
-                    <svg
-                      width="2"
-                      height="42"
-                      viewBox="0 0 2 36"
-                      fill="none"
-                      xmlns="http://www.w3.org/2000/svg"
-                    >
-                      <path
-                        d="M1 0V36"
-                        stroke="black"
-                        strokeOpacity="0.1"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                    </svg>
+                  {/* Quantity Controls */}
+                  <div className="col-span-2">
+                    <div className="flex w-32 items-start rounded-lg border border-black/10">
+                      <button
+                        type="submit"
+                        onClick={() =>
+                          handleQuantityChange(product.id, quantity - 1)
+                        }
+                        className="ease flex w-9 h-9 mt-1 justify-center items-center transition-all duration-200"
+                      >
+                        <MinusIcon className="h-4 w-4 text-gray-500" />
+                      </button>
+                      <svg
+                        width="2"
+                        height="42"
+                        viewBox="0 0 2 36"
+                        fill="none"
+                        xmlns="http://www.w3.org/2000/svg"
+                      >
+                        <path
+                          d="M1 0V36"
+                          stroke="black"
+                          strokeOpacity="0.1"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      </svg>
 
-                    <input
-                      type="number"
-                      placeholder="Quantity"
-                      className="border-none focus-visible:ring-0 focus-visible:border-black w-12 h-10 text-center [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                      value={quantity}
-                      onChange={(e) =>
-                        handleQuantityChange(
-                          product.id,
-                          parseInt(e.target.value) || 0
-                        )
-                      }
-                    />
-                    <svg
-                      width="2"
-                      height="42"
-                      viewBox="0 0 2 36"
-                      fill="none"
-                      xmlns="http://www.w3.org/2000/svg"
-                    >
-                      <path
-                        d="M1 0V36"
-                        stroke="black"
-                        strokeOpacity="0.1"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
+                      <input
+                        type="number"
+                        placeholder="Quantity"
+                        className="border-none focus-visible:ring-0 focus-visible:border-black w-12 h-10 text-center [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                        value={quantity}
+                        onChange={(e) =>
+                          handleQuantityChange(
+                            product.id,
+                            parseInt(e.target.value) || 0
+                          )
+                        }
                       />
-                    </svg>
-                    <button
-                      type="submit"
-                      onClick={() =>
-                        handleQuantityChange(product.id, quantity + 1)
-                      }
-                      className="ease flex w-9 h-9 mt-1 justify-center items-center transition-all duration-200"
-                    >
-                      <PlusIcon className="h-4 w-4 text-gray-500" />
-                    </button>
+                      <svg
+                        width="2"
+                        height="42"
+                        viewBox="0 0 2 36"
+                        fill="none"
+                        xmlns="http://www.w3.org/2000/svg"
+                      >
+                        <path
+                          d="M1 0V36"
+                          stroke="black"
+                          strokeOpacity="0.1"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      </svg>
+                      <button
+                        type="submit"
+                        onClick={() =>
+                          handleQuantityChange(product.id, quantity + 1)
+                        }
+                        className="ease flex w-9 h-9 mt-1 justify-center items-center transition-all duration-200"
+                      >
+                        <PlusIcon className="h-4 w-4 text-gray-500" />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Add to Cart Button */}
+                  <div className="col-span-2">
+                    {!variation_matrix && !components && (
+                      <button
+                        className={`py-2 w-32 text-sm px-2 rounded-md font-medium ${
+                          quantity > 0
+                            ? "bg-indigo-600 text-white hover:bg-indigo-700"
+                            : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                        }`}
+                        onClick={() => handleAddToCart(product.id)}
+                        disabled={quantity === 0}
+                      >
+                        Add to Cart
+                      </button>
+                    )}
+
+                    {variation_matrix && (
+                      <button
+                        className={`py-2 w-32 text-sm px-2 rounded-md font-medium ${
+                          quantity > 0
+                            ? "bg-indigo-600 text-white hover:bg-indigo-700"
+                            : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                        }`}
+                        onClick={() =>
+                          getVariants(product.id, variation_matrix)
+                        }
+                      >
+                        Choose Variants
+                      </button>
+                    )}
                   </div>
                 </div>
+                {/* Child Products Display */}
+                {variation_matrix &&
+                  child?.map((item: any) => {
+                    const {
+                      meta: {
+                        display_price,
+                        original_display_price,
+                        child_variations,
+                        sale_id,
+                      },
+                      attributes: { name, slug, sku },
+                      id,
+                    } = item;
 
-                {/* Add to Cart Button */}
-                <div className="col-span-2">
-                  <button
-                    className={`py-2 w-32 text-sm px-2 rounded-md font-medium ${
-                      quantity > 0
-                        ? "bg-indigo-600 text-white hover:bg-indigo-700"
-                        : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-                    }`}
-                    onClick={() => handleAddToCart(product.id)}
-                    disabled={quantity === 0}
-                  >
-                    Add to Cart
-                  </button>
-                </div>
-              </div>
+                    const currencyPrice =
+                      display_price?.without_tax?.formatted ||
+                      display_price?.with_tax?.formatted;
+
+                    const quantity = cartItems[id] || 0;
+                    const main_image = main_images.find(
+                      (image: any) =>
+                        image.id === item.relationships.main_image.data.id
+                    );
+                    const ep_main_image_url = main_image?.link.href;
+
+                    return (
+                      <div
+                        key={id}
+                        className="grid grid-cols-12 gap-4 items-center p-4 border rounded shadow-sm relative bg-green-50"
+                      >
+                        {quantity > 0 && (
+                          <CheckCircleIcon className="w-6 h-6 text-green-500 absolute top-0 left-0 z-10" />
+                        )}
+                        <div className="col-span-1">
+                          {ep_main_image_url && (
+                            <img
+                              src={ep_main_image_url}
+                              alt={name}
+                              className="w-20 h-24 object-cover transition duration-300 ease-in-out group-hover:scale-105 hover:scale-105"
+                            />
+                          )}
+                        </div>
+                        <div className="col-span-5">
+                          <h2 className="text-lg text-gray-800 font-semibold hover:text-brand-primary">
+                            <Link href={`/products/${slug}`} legacyBehavior>
+                              {name}
+                            </Link>
+                          </h2>
+                          <div className="text-gray-600 text-sm">{sku}</div>
+                          {child_variations?.map((variation: any) => {
+                            return (
+                              <span
+                                className="line-clamp-6 text-xs font-medium leading-5 text-gray-500"
+                                key={variation.id}
+                              >
+                                {variation.name}: {variation.option.name}
+                              </span>
+                            );
+                          })}
+                        </div>
+                        <div className="col-span-2 text-green-500 font-bold">
+                          {currencyPrice && (
+                            <div className="mt-1 flex items-center">
+                              {original_display_price && (
+                                <StrikePrice
+                                  price={
+                                    original_display_price?.without_tax
+                                      ?.formatted
+                                      ? original_display_price?.without_tax
+                                          ?.formatted
+                                      : original_display_price.with_tax
+                                          .formatted
+                                  }
+                                  currency={
+                                    original_display_price.without_tax?.currency
+                                      ? original_display_price?.without_tax
+                                          ?.currency
+                                      : original_display_price.with_tax.currency
+                                  }
+                                  size="text-md"
+                                />
+                              )}
+                              <Price
+                                price={
+                                  display_price?.without_tax?.formatted
+                                    ? display_price?.without_tax?.formatted
+                                    : display_price.with_tax.formatted
+                                }
+                                currency={
+                                  display_price?.without_tax?.currency
+                                    ? display_price?.without_tax?.currency
+                                    : display_price.with_tax.currency
+                                }
+                                size="text-xl"
+                              />
+                            </div>
+                          )}
+                          {original_display_price && (
+                            <span className="mt-2 uppercase inline-flex items-center rounded-sm bg-white px-2 py-1 text-xs font-medium text-pink-700 ring-1 ring-inset ring-pink-700 mb-6 mr-2">
+                              {sale_id}
+                            </span>
+                          )}
+                        </div>
+                        <div className="col-span-2">
+                          <div className="flex w-32 items-start rounded-lg border border-black/10">
+                            <button
+                              type="submit"
+                              onClick={() =>
+                                handleInputChange(id, quantity - 1)
+                              }
+                              className="ease flex w-9 h-9 mt-1 justify-center items-center transition-all duration-200"
+                            >
+                              <MinusIcon className="h-4 w-4 dark:text-neutral-500" />
+                            </button>
+                            <svg
+                              width="2"
+                              height="42"
+                              viewBox="0 0 2 36"
+                              fill="none"
+                              xmlns="http://www.w3.org/2000/svg"
+                            >
+                              <path
+                                d="M1 0V36"
+                                stroke="black"
+                                strokeOpacity="0.1"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                              />
+                            </svg>
+
+                            <input
+                              type="number"
+                              placeholder="Quantity"
+                              className="bg-green-50 border-none focus-visible:ring-0 focus-visible:border-black w-12 h-10 text-center [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                              value={quantity}
+                              onChange={(e) =>
+                                handleInputChange(id, parseInt(e.target.value))
+                              }
+                            />
+                            <svg
+                              width="2"
+                              height="42"
+                              viewBox="0 0 2 36"
+                              fill="none"
+                              xmlns="http://www.w3.org/2000/svg"
+                            >
+                              <path
+                                d="M1 0V36"
+                                stroke="black"
+                                strokeOpacity="0.1"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                              />
+                            </svg>
+                            <button
+                              type="submit"
+                              onClick={() =>
+                                handleInputChange(id, quantity + 1)
+                              }
+                              className="ease flex w-9 h-9 mt-1 justify-center items-center transition-all duration-200"
+                            >
+                              <PlusIcon className="h-4 w-4 dark:text-neutral-500" />
+                            </button>
+                          </div>
+                        </div>
+                        <div className="col-span-2">
+                          <button
+                            className={`py-2 w-32 text-sm px-2 rounded-md font-medium ${
+                              quantity > 0
+                                ? "bg-indigo-600 text-white hover:bg-indigo-700"
+                                : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                            }`}
+                            onClick={() => handleAddToCart(id)}
+                            disabled={quantity === 0}
+                          >
+                            Add to Cart
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+              </>
             );
           })}
         </div>

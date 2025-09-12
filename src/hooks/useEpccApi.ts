@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useEpccClientWithState } from "./useEpccClient";
-import { useAuth } from "../contexts/AuthContext";
 import type {
   Address,
   CheckoutCustomerObject,
@@ -11,7 +10,6 @@ import type {
   UserAuthenticationPasswordProfileBody,
 } from "@elasticpath/js-sdk";
 import { v4 as uuidv4 } from "uuid";
-import { useToast } from "@/contexts/ToastContext";
 
 /**
  * Enhanced hook for EPCC API interactions with error handling and loading states
@@ -25,7 +23,6 @@ export const useEpccApi = (orgId?: string, storeId?: string) => {
   } = useEpccClientWithState(orgId, storeId);
   const [apiLoading, setApiLoading] = useState(false);
   const [apiError, setApiError] = useState<string | null>(null);
-  const { showToast } = useToast();
 
   /**
    * Generic API call wrapper with error handling
@@ -2452,6 +2449,43 @@ export const useEpccApi = (orgId?: string, storeId?: string) => {
   );
 
   /**
+   * Get product by ids
+   */
+  const fetchProductByIds = useCallback(
+    async (
+      accountToken: string,
+      orgId: string,
+      storeId: string,
+      productIds: string[]
+    ) => {
+      const headers: any = {
+        "EP-Account-Management-Authentication-Token": accountToken,
+      };
+      if (orgId) {
+        headers["EP-ORG-ID"] = orgId;
+      }
+      if (storeId) {
+        headers["EP-STORE-ID"] = storeId;
+      }
+      return apiCall(async (client) => {
+        return await client.request.send(
+          `catalog/products?include=main_image&filter=in(id,${productIds.join(
+            ","
+          )})`,
+          "GET",
+          null,
+          undefined,
+          client,
+          undefined,
+          "pcm",
+          headers
+        );
+      }, "Failed to fetch product by ids");
+    },
+    [apiCall]
+  );
+
+  /**
    * Update cart item quantity
    */
   const updateCartItemQuantity = useCallback(
@@ -2916,6 +2950,8 @@ export const useEpccApi = (orgId?: string, storeId?: string) => {
     searchOrders,
     fetchShippingGroups,
     fetchCatalogs,
+    fetchProductByIds,
+    fetchAllProducts,
     fetchUserProfile,
     fetchUserRole,
     fetchOrgStores,
@@ -2978,7 +3014,6 @@ export const useEpccApi = (orgId?: string, storeId?: string) => {
     fetchPasswordProfiles,
     impersonateUser,
     fetchAllAccountCarts,
-    fetchAllProducts,
     fetchCartById,
     fetchFullCartDetails,
     updateCartItemQuantity,
