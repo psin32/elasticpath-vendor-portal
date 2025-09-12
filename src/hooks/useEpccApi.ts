@@ -155,6 +155,127 @@ export const useEpccApi = (orgId?: string, storeId?: string) => {
   );
 
   /**
+   * Search products with filtering
+   */
+  const searchProducts = useCallback(
+    async (filters: any, options?: { limit?: number; offset?: number }) => {
+      return apiCall(async (client) => {
+        const limit = options?.limit || 100;
+        const offset = options?.offset || 0;
+
+        // Build filter object based on Elastic Path API filtering options
+        const filterObj: any = {};
+
+        // Basic text filters (like operator)
+        if (filters.name) {
+          filterObj.like = { ...filterObj.like, name: filters.name };
+        }
+        if (filters.sku) {
+          filterObj.like = { ...filterObj.like, sku: filters.sku };
+        }
+        if (filters.slug) {
+          filterObj.like = { ...filterObj.like, slug: filters.slug };
+        }
+        if (filters.upc_ean) {
+          filterObj.like = { ...filterObj.like, upc_ean: filters.upc_ean };
+        }
+        if (filters.manufacturer_part_num) {
+          filterObj.like = {
+            ...filterObj.like,
+            manufacturer_part_num: filters.manufacturer_part_num,
+          };
+        }
+        if (filters.description) {
+          filterObj.like = {
+            ...filterObj.like,
+            description: filters.description,
+          };
+        }
+        if (filters.external_ref) {
+          filterObj.like = {
+            ...filterObj.like,
+            external_ref: filters.external_ref,
+          };
+        }
+        if (filters.tags) {
+          filterObj.like = { ...filterObj.like, tags: filters.tags };
+        }
+
+        // Exact match filters (eq operator)
+        if (filters.status) {
+          filterObj.eq = { ...filterObj.eq, status: filters.status };
+        }
+        if (filters.commodity_type) {
+          filterObj.eq = {
+            ...filterObj.eq,
+            commodity_type: filters.commodity_type,
+          };
+        }
+        if (filters.product_types) {
+          filterObj.eq = {
+            ...filterObj.eq,
+            product_types: filters.product_types,
+          };
+        }
+        if (filters.parent_id) {
+          filterObj.eq = { ...filterObj.eq, parent_id: filters.parent_id };
+        }
+        if (filters.templates) {
+          filterObj.eq = { ...filterObj.eq, templates: filters.templates };
+        }
+        if (filters.owner) {
+          filterObj.eq = { ...filterObj.eq, owner: filters.owner };
+        }
+        if (filters.has_nodes !== undefined) {
+          filterObj.eq = { ...filterObj.eq, has_nodes: filters.has_nodes };
+        }
+
+        // Date range filters
+        if (filters.created_at_from) {
+          filterObj.ge = {
+            ...filterObj.ge,
+            created_at: filters.created_at_from,
+          };
+        }
+        if (filters.created_at_to) {
+          filterObj.le = { ...filterObj.le, created_at: filters.created_at_to };
+        }
+        if (filters.updated_at_from) {
+          filterObj.ge = {
+            ...filterObj.ge,
+            updated_at: filters.updated_at_from,
+          };
+        }
+        if (filters.updated_at_to) {
+          filterObj.le = { ...filterObj.le, updated_at: filters.updated_at_to };
+        }
+
+        // ID range filters
+        if (filters.id_from) {
+          filterObj.ge = { ...filterObj.ge, id: filters.id_from };
+        }
+        if (filters.id_to) {
+          filterObj.le = { ...filterObj.le, id: filters.id_to };
+        }
+
+        // Build the query with filters
+        let query: any = client.PCM.Limit(limit)
+          .Offset(offset)
+          .With("main_image");
+
+        if (Object.keys(filterObj).length > 0) {
+          query = query.Filter(filterObj);
+        }
+
+        console.log("filterObj", filterObj);
+
+        return await query.All();
+      }, "Failed to search products");
+    },
+    [apiCall]
+  );
+
+  /**
    * Fetch product by ID
    */
   const fetchProduct = useCallback(
@@ -2944,6 +3065,7 @@ export const useEpccApi = (orgId?: string, storeId?: string) => {
     fetchOrganization,
     fetchStore,
     fetchProducts,
+    searchProducts,
     fetchProduct,
     fetchOrders,
     fetchOrder,

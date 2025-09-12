@@ -5,6 +5,9 @@ import Link from "next/link";
 import { useEpccApi } from "@/hooks/useEpccApi";
 import { useToast } from "@/contexts/ToastContext";
 import { useCartContext } from "@/contexts/CartContext";
+import ProductFilter, {
+  ProductFilterState,
+} from "@/components/products/ProductFilter";
 import {
   MagnifyingGlassIcon,
   PlusIcon,
@@ -23,7 +26,7 @@ export default function ProductsComponent({
   selectedOrgId,
   selectedStoreId,
 }: ProductsComponentProps) {
-  const { fetchAllProducts, fetchProductByIds } = useEpccApi(
+  const { fetchAllProducts, searchProducts, fetchProductByIds } = useEpccApi(
     selectedOrgId || undefined,
     selectedStoreId || undefined
   );
@@ -35,6 +38,7 @@ export default function ProductsComponent({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const [filters, setFilters] = useState<ProductFilterState>({});
   const [cartItems, setCartItems] = useState<Record<string, number>>({});
   const [childItems, setChildItems] = useState<any>([]);
 
@@ -45,18 +49,21 @@ export default function ProductsComponent({
       setProducts([]);
       setError(null);
     }
-  }, [selectedAccountToken, selectedOrgId, selectedStoreId]);
+  }, [selectedAccountToken, selectedOrgId, selectedStoreId, filters]);
 
   const loadProducts = async () => {
     setLoading(true);
     setError(null);
 
     try {
-      const response = await fetchAllProducts(
-        selectedAccountToken,
-        selectedOrgId || "",
-        selectedStoreId || ""
-      );
+      const hasFilters = Object.keys(filters).length > 0;
+      const response = hasFilters
+        ? await searchProducts(filters)
+        : await fetchAllProducts(
+            selectedAccountToken,
+            selectedOrgId || "",
+            selectedStoreId || ""
+          );
 
       if (response?.data) {
         const productsArray = Array.isArray(response.data)
@@ -114,6 +121,14 @@ export default function ProductsComponent({
     }
 
     await addItemToCart(productId, currentQuantity);
+  };
+
+  const handleFilterChange = (newFilters: ProductFilterState) => {
+    setFilters(newFilters);
+  };
+
+  const handleClearFilters = () => {
+    setFilters({});
   };
 
   const handleInputChange = (productId: string, quantity: number) => {
@@ -302,25 +317,13 @@ export default function ProductsComponent({
         </div>
       </div>
 
-      {/* Search and Filter Controls */}
-      <div className="px-6 py-4 border-b border-gray-200 ">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-3 sm:space-y-0 sm:space-x-4">
-          {/* Search */}
-          <div className="flex-1 max-w-lg">
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <MagnifyingGlassIcon className="h-5 w-5 text-gray-400" />
-              </div>
-              <input
-                type="text"
-                placeholder="Search products..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-              />
-            </div>
-          </div>
-        </div>
+      {/* Product Filter */}
+      <div className="px-6 py-4 border-b border-gray-200">
+        <ProductFilter
+          onFilterChange={handleFilterChange}
+          onClearFilters={handleClearFilters}
+          loading={loading}
+        />
       </div>
 
       {/* Products Display */}
@@ -709,10 +712,10 @@ export default function ProductsComponent({
         {/* Results Summary */}
         {products.length > 0 && (
           <div className="mt-6 flex items-center justify-between text-sm text-gray-500">
-            <div>
-              Showing {products.length} of {products.length} products
-            </div>
-            {searchTerm && <div>Filtered by: "{searchTerm}"</div>}
+            <div>Showing {products.length} products</div>
+            {Object.keys(filters).length > 0 && (
+              <div>Filtered by {Object.keys(filters).length} criteria</div>
+            )}
           </div>
         )}
       </div>

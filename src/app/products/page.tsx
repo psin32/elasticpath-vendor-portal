@@ -6,6 +6,9 @@ import { useEpccApi } from "../../hooks/useEpccApi";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ImageOverlay } from "../../components/ui/ImageOverlay";
 import { ProductForm } from "../../components/products/ProductForm";
+import ProductFilter, {
+  ProductFilterState,
+} from "../../components/products/ProductFilter";
 import { useDashboard } from "../../hooks/useDashboard";
 import { PcmProduct } from "@elasticpath/js-sdk";
 
@@ -22,6 +25,7 @@ export default function ProductsPage() {
     alt: string;
   } | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const [filters, setFilters] = useState<ProductFilterState>({});
   const [currentPage, setCurrentPage] = useState(1);
   const [paginationInfo, setPaginationInfo] = useState({
     current_page: 1,
@@ -35,7 +39,7 @@ export default function ProductsPage() {
   const { selectedOrgId, selectedStoreId, handleOrgSelect, handleStoreSelect } =
     useDashboard();
 
-  const { fetchProducts } = useEpccApi(
+  const { fetchProducts, searchProducts } = useEpccApi(
     selectedOrgId || undefined,
     selectedStoreId || undefined
   );
@@ -65,7 +69,13 @@ export default function ProductsPage() {
     if (selectedStoreId) {
       loadProducts();
     }
-  }, [selectedOrgId, selectedStoreId, currentPage, paginationInfo.per_page]);
+  }, [
+    selectedOrgId,
+    selectedStoreId,
+    currentPage,
+    paginationInfo.per_page,
+    filters,
+  ]);
 
   const handleCreateSuccess = (newProduct: PcmProduct) => {
     setShowCreateForm(false);
@@ -77,6 +87,16 @@ export default function ProductsPage() {
     setShowCreateForm(false);
   };
 
+  const handleFilterChange = (newFilters: ProductFilterState) => {
+    setFilters(newFilters);
+    setCurrentPage(1); // Reset to first page when filters change
+  };
+
+  const handleClearFilters = () => {
+    setFilters({});
+    setCurrentPage(1);
+  };
+
   const loadProducts = async () => {
     if (!selectedStoreId) return;
 
@@ -84,10 +104,16 @@ export default function ProductsPage() {
     setError(null);
 
     try {
-      const productsData = await fetchProducts({
-        limit: paginationInfo.per_page,
-        offset: (currentPage - 1) * paginationInfo.per_page,
-      });
+      const hasFilters = Object.keys(filters).length > 0;
+      const productsData = hasFilters
+        ? await searchProducts(filters, {
+            limit: paginationInfo.per_page,
+            offset: (currentPage - 1) * paginationInfo.per_page,
+          })
+        : await fetchProducts({
+            limit: paginationInfo.per_page,
+            offset: (currentPage - 1) * paginationInfo.per_page,
+          });
 
       if (productsData) {
         const productsArray = productsData?.data || [];
@@ -132,15 +158,8 @@ export default function ProductsPage() {
     router.push(`/products?${params.toString()}`);
   };
 
-  const filteredProducts = products.filter(
-    (product) =>
-      product.attributes.name
-        .toLowerCase()
-        .includes(searchTerm.toLowerCase()) ||
-      (product.attributes.sku?.toLowerCase() || "").includes(
-        searchTerm.toLowerCase()
-      )
-  );
+  // Products are now filtered server-side, so we use them directly
+  const filteredProducts = products;
 
   if (loading) {
     return (
@@ -189,19 +208,25 @@ export default function ProductsPage() {
         <main className="flex-1 overflow-auto bg-white">
           <div className="p-6 bg-white">
             <div className="w-full">
-              {/* Search and Controls */}
+              {/* Product Filter */}
+              <ProductFilter
+                onFilterChange={handleFilterChange}
+                onClearFilters={handleClearFilters}
+                loading={productsLoading}
+              />
+
+              {/* Controls */}
               <div className="mb-6">
                 <div className="flex items-center justify-between">
-                  <div className="flex-1 max-w-md">
-                    <input
-                      type="text"
-                      placeholder="Search products by name or SKU..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    />
+                  <div className="flex-1">
+                    <h2 className="text-2xl font-bold text-gray-900">
+                      Products
+                    </h2>
+                    <p className="mt-1 text-sm text-gray-500">
+                      Manage your product catalog with advanced filtering
+                    </p>
                   </div>
-                  <div className="ml-4 flex space-x-3">
+                  <div className="flex space-x-3">
                     <button
                       onClick={() => setShowCreateForm(true)}
                       disabled={!selectedStoreId}
