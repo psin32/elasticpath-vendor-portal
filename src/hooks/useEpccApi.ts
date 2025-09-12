@@ -269,6 +269,171 @@ export const useEpccApi = (orgId?: string, storeId?: string) => {
   );
 
   /**
+   * Search orders with pagination and multiple filters
+   */
+  const searchOrders = useCallback(
+    async (
+      filters: {
+        status?: string;
+        payment?: string;
+        shipping?: string;
+        customerName?: string;
+        customerEmail?: string;
+        customerId?: string;
+        accountId?: string;
+        accountMemberId?: string;
+        contactName?: string;
+        contactEmail?: string;
+        shippingPostcode?: string;
+        billingPostcode?: string;
+        withTaxMin?: number;
+        withTaxMax?: number;
+        withoutTaxMin?: number;
+        withoutTaxMax?: number;
+        currency?: string;
+        productId?: string;
+        productSku?: string;
+        createdFrom?: string;
+        createdTo?: string;
+        updatedFrom?: string;
+        updatedTo?: string;
+        externalRef?: string;
+        orderNumber?: string;
+      },
+      options?: { page?: number; limit?: number }
+    ) => {
+      return apiCall(async (client) => {
+        const limit = options?.limit || 100;
+        const offset = options?.page || 0;
+
+        // Build filter object for the API
+        const filterObj: any = {};
+
+        // Status filters
+        if (filters.status) {
+          filterObj.eq = { ...filterObj.eq, status: filters.status };
+        }
+        if (filters.payment) {
+          filterObj.eq = { ...filterObj.eq, payment: filters.payment };
+        }
+        if (filters.shipping) {
+          filterObj.eq = { ...filterObj.eq, shipping: filters.shipping };
+        }
+        if (filters.currency) {
+          filterObj.eq = { ...filterObj.eq, currency: filters.currency };
+        }
+        if (filters.productId) {
+          filterObj.eq = { ...filterObj.eq, product_id: filters.productId };
+        }
+        if (filters.productSku) {
+          filterObj.eq = { ...filterObj.eq, product_sku: filters.productSku };
+        }
+
+        // Like filters (for partial matches)
+        if (filters.customerName) {
+          filterObj.like = { ...filterObj.like, name: filters.customerName };
+        }
+        if (filters.customerEmail) {
+          filterObj.like = { ...filterObj.like, email: filters.customerEmail };
+        }
+        if (filters.customerId) {
+          filterObj.eq = { ...filterObj.eq, customer_id: filters.customerId };
+        }
+        if (filters.accountId) {
+          filterObj.eq = { ...filterObj.eq, account_id: filters.accountId };
+        }
+        if (filters.accountMemberId) {
+          filterObj.eq = {
+            ...filterObj.eq,
+            account_member_id: filters.accountMemberId,
+          };
+        }
+        if (filters.contactName) {
+          filterObj.like = {
+            ...filterObj.like,
+            "contact.name": filters.contactName,
+          };
+        }
+        if (filters.contactEmail) {
+          filterObj.like = {
+            ...filterObj.like,
+            "contact.email": filters.contactEmail,
+          };
+        }
+        if (filters.shippingPostcode) {
+          filterObj.like = {
+            ...filterObj.like,
+            shipping_postcode: filters.shippingPostcode,
+          };
+        }
+        if (filters.billingPostcode) {
+          filterObj.like = {
+            ...filterObj.like,
+            billing_postcode: filters.billingPostcode,
+          };
+        }
+        if (filters.externalRef) {
+          filterObj.like = {
+            ...filterObj.like,
+            external_ref: filters.externalRef,
+          };
+        }
+        if (filters.orderNumber) {
+          filterObj.like = {
+            ...filterObj.like,
+            order_number: filters.orderNumber,
+          };
+        }
+
+        // Amount filters
+        if (filters.withTaxMin !== undefined) {
+          filterObj.ge = { ...filterObj.ge, with_tax: filters.withTaxMin };
+        }
+        if (filters.withTaxMax !== undefined) {
+          filterObj.le = { ...filterObj.le, with_tax: filters.withTaxMax };
+        }
+        if (filters.withoutTaxMin !== undefined) {
+          filterObj.ge = {
+            ...filterObj.ge,
+            without_tax: filters.withoutTaxMin,
+          };
+        }
+        if (filters.withoutTaxMax !== undefined) {
+          filterObj.le = {
+            ...filterObj.le,
+            without_tax: filters.withoutTaxMax,
+          };
+        }
+
+        // Date filters
+        if (filters.createdFrom) {
+          filterObj.ge = { ...filterObj.ge, created_at: filters.createdFrom };
+        }
+        if (filters.createdTo) {
+          filterObj.le = { ...filterObj.le, created_at: filters.createdTo };
+        }
+        if (filters.updatedFrom) {
+          filterObj.ge = { ...filterObj.ge, updated_at: filters.updatedFrom };
+        }
+        if (filters.updatedTo) {
+          filterObj.le = { ...filterObj.le, updated_at: filters.updatedTo };
+        }
+
+        // Build the query with filters
+        let query = client.Orders.Limit(limit).Offset(offset);
+
+        if (Object.keys(filterObj).length > 0) {
+          query = query.Filter(filterObj);
+        }
+
+        const response = await query.All();
+        return response;
+      }, "Failed to search orders");
+    },
+    [apiCall]
+  );
+
+  /**
    * Fetch a single order by ID
    */
   const fetchOrder = useCallback(
@@ -1817,6 +1982,58 @@ export const useEpccApi = (orgId?: string, storeId?: string) => {
   );
 
   /**
+   * Search account members with pagination and filters
+   */
+  const searchAccountMembers = useCallback(
+    async (
+      filters: {
+        email?: string;
+        name?: string;
+      },
+      options?: { page?: number; limit?: number }
+    ) => {
+      return apiCall(async (client) => {
+        const limit = options?.limit || 100;
+        const offset = options?.page || 0;
+
+        // Build filter object for the API
+        const filterObj: any = {};
+
+        // Email filter - can use eq or like
+        if (filters.email) {
+          // Check if it contains wildcards for like operator
+          if (filters.email.includes("*")) {
+            filterObj.like = { ...filterObj.like, email: filters.email };
+          } else {
+            filterObj.eq = { ...filterObj.eq, email: filters.email };
+          }
+        }
+
+        // Name filter - can use eq or like
+        if (filters.name) {
+          // Check if it contains wildcards for like operator
+          if (filters.name.includes("*")) {
+            filterObj.like = { ...filterObj.like, name: filters.name };
+          } else {
+            filterObj.eq = { ...filterObj.eq, name: filters.name };
+          }
+        }
+
+        // Build the query with filters
+        let query = client.AccountMembers.Limit(limit).Offset(offset);
+
+        if (Object.keys(filterObj).length > 0) {
+          query = query.Filter(filterObj);
+        }
+
+        const response = await query.All();
+        return response;
+      }, "Failed to search account members");
+    },
+    [apiCall]
+  );
+
+  /**
    * Get all account memberships
    */
   const fetchAccountMemberships = useCallback(
@@ -2696,6 +2913,7 @@ export const useEpccApi = (orgId?: string, storeId?: string) => {
     fetchProduct,
     fetchOrders,
     fetchOrder,
+    searchOrders,
     fetchShippingGroups,
     fetchCatalogs,
     fetchUserProfile,
@@ -2754,6 +2972,7 @@ export const useEpccApi = (orgId?: string, storeId?: string) => {
     deleteMappingField,
     fetchCustomAPIFilteredData,
     fetchAccountMembers,
+    searchAccountMembers,
     fetchAccountMemberships,
     fetchAccountAuthenticationRealms,
     fetchPasswordProfiles,

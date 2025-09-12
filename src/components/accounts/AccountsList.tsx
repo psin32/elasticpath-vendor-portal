@@ -1,23 +1,13 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Order } from "@elasticpath/js-sdk";
+import { AccountMember } from "@elasticpath/js-sdk";
 import { useToast } from "@/contexts/ToastContext";
-import OrderFilter, {
-  OrderFilterState,
-  OrderFilterFormState,
-} from "./OrderFilter";
-
-// Type guard to ensure compatibility
-const isOrder = (obj: any): obj is Order => {
-  return obj && obj.attributes && typeof obj.attributes.number === "string";
-};
-
-// Cast function to handle SDK type mismatch
-const castToOrder = (sdkOrder: any): Order => {
-  return sdkOrder as Order;
-};
+import AccountFilter, {
+  AccountFilterState,
+  AccountFilterFormState,
+} from "./AccountFilter";
 
 interface PaginationInfo {
   current_page: number;
@@ -26,13 +16,13 @@ interface PaginationInfo {
   per_page: number;
 }
 
-interface OrdersListProps {
-  orders: Order[];
+interface AccountsListProps {
+  accounts: AccountMember[];
   loading: boolean;
   error?: string | null;
   onRefresh?: () => void;
   onPageChange?: (page: number) => void;
-  onFilterChange?: (filters: OrderFilterState) => void;
+  onFilterChange?: (filters: AccountFilterState) => void;
   onClearFilters?: () => void;
   paginationInfo?: PaginationInfo;
   showPagination?: boolean;
@@ -42,11 +32,11 @@ interface OrdersListProps {
   subtitle?: string;
   emptyMessage?: string;
   emptySubMessage?: string;
-  onOrderClick?: (orderId: string) => void;
+  onAccountClick?: (accountId: string) => void;
 }
 
-export default function OrdersList({
-  orders,
+export default function AccountsList({
+  accounts,
   loading,
   error,
   onRefresh,
@@ -57,12 +47,12 @@ export default function OrdersList({
   showPagination = true,
   showRefresh = true,
   showFilter = true,
-  title = "Orders",
-  subtitle = "Manage your orders",
-  emptyMessage = "No orders found",
-  emptySubMessage = "Get started by creating a new order.",
-  onOrderClick,
-}: OrdersListProps) {
+  title = "Account Members",
+  subtitle = "Manage account members",
+  emptyMessage = "No account members found",
+  emptySubMessage = "No account members found for this store.",
+  onAccountClick,
+}: AccountsListProps) {
   const router = useRouter();
   const { showToast } = useToast();
   const [currentPage, setCurrentPage] = useState(1);
@@ -74,11 +64,11 @@ export default function OrdersList({
     }
   };
 
-  const handleOrderClick = (orderId: string) => {
-    if (onOrderClick) {
-      onOrderClick(orderId);
+  const handleAccountClick = (accountId: string) => {
+    if (onAccountClick) {
+      onAccountClick(accountId);
     } else {
-      router.push(`/orders/${orderId}`);
+      router.push(`/accounts/${accountId}`);
     }
   };
 
@@ -90,47 +80,6 @@ export default function OrdersList({
       hour: "2-digit",
       minute: "2-digit",
     });
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status.toLowerCase()) {
-      case "complete":
-        return "bg-green-100 text-green-800";
-      case "pending":
-        return "bg-yellow-100 text-yellow-800";
-      case "cancelled":
-        return "bg-red-100 text-red-800";
-      default:
-        return "bg-gray-100 text-gray-800";
-    }
-  };
-
-  const getPaymentStatusColor = (status: string) => {
-    switch (status.toLowerCase()) {
-      case "paid":
-        return "bg-green-100 text-green-800";
-      case "pending":
-        return "bg-yellow-100 text-yellow-800";
-      case "failed":
-        return "bg-red-100 text-red-800";
-      default:
-        return "bg-gray-100 text-gray-800";
-    }
-  };
-
-  const getShippingStatusColor = (status: string) => {
-    switch (status.toLowerCase()) {
-      case "fulfilled":
-        return "bg-green-100 text-green-800";
-      case "shipped":
-        return "bg-blue-100 text-blue-800";
-      case "pending":
-        return "bg-yellow-100 text-yellow-800";
-      case "cancelled":
-        return "bg-red-100 text-red-800";
-      default:
-        return "bg-gray-100 text-gray-800";
-    }
   };
 
   if (loading) {
@@ -156,7 +105,7 @@ export default function OrdersList({
             d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
           ></path>
         </svg>
-        <p className="mt-2 text-gray-600">Loading orders...</p>
+        <p className="mt-2 text-gray-600">Loading account members...</p>
       </div>
     );
   }
@@ -200,7 +149,7 @@ export default function OrdersList({
     <div className="w-full">
       {/* Filter Component */}
       {showFilter && onFilterChange && onClearFilters && (
-        <OrderFilter
+        <AccountFilter
           onFilterChange={onFilterChange}
           onClearFilters={onClearFilters}
           loading={loading}
@@ -220,8 +169,8 @@ export default function OrdersList({
         </div>
       )}
 
-      {/* Orders List */}
-      {orders.length === 0 ? (
+      {/* Accounts List */}
+      {accounts.length === 0 ? (
         <div className="text-center py-12">
           <svg
             className="mx-auto h-12 w-12 text-gray-400"
@@ -233,7 +182,7 @@ export default function OrdersList({
               strokeLinecap="round"
               strokeLinejoin="round"
               strokeWidth={2}
-              d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+              d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"
             />
           </svg>
           <h3 className="mt-2 text-sm font-medium text-gray-900">
@@ -255,83 +204,43 @@ export default function OrdersList({
               <thead className="bg-white">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Order
+                    Name
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Customer
+                    Email
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Status
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Payment
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Shipping
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Total
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Date
+                    Created
                   </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
-                {orders.map((order) => (
-                  <tr key={order.id} className="hover:bg-gray-50">
+                {accounts.map((account) => (
+                  <tr key={account.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center">
-                        <div>
-                          <div
-                            className="text-sm font-medium text-indigo-600 hover:text-indigo-900 cursor-pointer font-mono"
-                            onClick={() => handleOrderClick(order.id)}
-                          >
-                            {order.id}
-                          </div>
-                        </div>
+                      <div className="text-sm text-gray-900">
+                        <button
+                          onClick={() => handleAccountClick(account.id)}
+                          className="text-indigo-600 hover:text-indigo-900 cursor-pointer font-medium"
+                        >
+                          {(account as any)?.name || "N/A"}
+                        </button>
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm text-gray-900">
-                        {order.contact?.email || order.customer?.email}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span
-                        className={`inline-flex px-2 py-1 text-xs font-semibold rounded-sm capitalize ${getStatusColor(
-                          order.status
-                        )}`}
-                      >
-                        {order.status}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span
-                        className={`inline-flex px-2 py-1 text-xs font-semibold rounded-sm capitalize ${getPaymentStatusColor(
-                          order.payment
-                        )}`}
-                      >
-                        {order.payment}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span
-                        className={`inline-flex px-2 py-1 text-xs font-semibold rounded-sm capitalize ${getShippingStatusColor(
-                          order.shipping || "pending"
-                        )}`}
-                      >
-                        {order.shipping || "pending"}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900 font-medium">
-                        {order.meta.display_price.with_tax.formatted}
+                        {(account as any)?.email || "N/A"}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm text-gray-900">
-                        {formatDate(order.meta.timestamps.created_at)}
+                        {(account as any).attributes?.created_at ||
+                        (account as any).meta?.timestamps?.created_at
+                          ? formatDate(
+                              (account as any).attributes?.created_at ||
+                                (account as any).meta?.timestamps?.created_at
+                            )
+                          : "N/A"}
                       </div>
                     </td>
                   </tr>

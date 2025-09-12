@@ -8,6 +8,7 @@ import { useDashboard } from "../../hooks/useDashboard";
 import { Order } from "@elasticpath/js-sdk";
 import { useToast } from "@/contexts/ToastContext";
 import OrdersList from "@/components/orders/OrdersList";
+import { OrderFilterState } from "@/components/orders/OrderFilter";
 
 // Type guard to ensure compatibility
 const isOrder = (obj: any): obj is Order => {
@@ -33,6 +34,7 @@ export default function OrdersPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [ordersLoading, setOrdersLoading] = useState(false);
   const [currentPage, setCurrentPage] = useState(0);
+  const [filters, setFilters] = useState<OrderFilterState>({});
   const [paginationInfo, setPaginationInfo] = useState<PaginationInfo>({
     current_page: 1,
     total_pages: 1,
@@ -45,7 +47,7 @@ export default function OrdersPage() {
   const { selectedOrgId, selectedStoreId, handleOrgSelect, handleStoreSelect } =
     useDashboard();
 
-  const { fetchOrders } = useEpccApi(
+  const { fetchOrders, searchOrders } = useEpccApi(
     selectedOrgId || undefined,
     selectedStoreId || undefined
   );
@@ -70,12 +72,18 @@ export default function OrdersPage() {
     }
   }, [searchParams]);
 
-  // Fetch orders when org/store changes or page changes
+  // Fetch orders when org/store changes, page changes, or filters change
   useEffect(() => {
     if (selectedStoreId) {
       loadOrders();
     }
-  }, [selectedOrgId, selectedStoreId, currentPage, paginationInfo.per_page]);
+  }, [
+    selectedOrgId,
+    selectedStoreId,
+    currentPage,
+    paginationInfo.per_page,
+    filters,
+  ]);
 
   const loadOrders = async () => {
     if (!selectedStoreId) return;
@@ -83,10 +91,25 @@ export default function OrdersPage() {
     setOrdersLoading(true);
 
     try {
-      const ordersData = await fetchOrders({
-        page: currentPage,
-        limit: paginationInfo.per_page,
-      });
+      // Check if we have any filters applied
+      const hasFilters = Object.values(filters).some(
+        (value) => value !== undefined && value !== "" && value !== null
+      );
+
+      let ordersData;
+      if (hasFilters) {
+        // Use searchOrders with filters
+        ordersData = await searchOrders(filters, {
+          page: currentPage,
+          limit: paginationInfo.per_page,
+        });
+      } else {
+        // Use regular fetchOrders
+        ordersData = await fetchOrders({
+          page: currentPage,
+          limit: paginationInfo.per_page,
+        });
+      }
 
       if (ordersData) {
         const ordersArray = (ordersData.data || []).map(castToOrder);
@@ -117,6 +140,16 @@ export default function OrdersPage() {
     params.set("page", page.toString());
     params.set("limit", paginationInfo.per_page.toString());
     router.push(`/orders?${params.toString()}`);
+  };
+
+  const handleFilterChange = (newFilters: OrderFilterState) => {
+    setFilters(newFilters);
+    setCurrentPage(0); // Reset to first page when filters change
+  };
+
+  const handleClearFilters = () => {
+    setFilters({});
+    setCurrentPage(0);
   };
 
   if (loading) {
@@ -190,7 +223,10 @@ export default function OrdersPage() {
                   loading={ordersLoading}
                   onRefresh={loadOrders}
                   onPageChange={handlePageChange}
+                  onFilterChange={handleFilterChange}
+                  onClearFilters={handleClearFilters}
                   paginationInfo={paginationInfo}
+                  showFilter={true}
                   title="Orders"
                   subtitle="Manage your orders"
                   emptyMessage="No orders found"
