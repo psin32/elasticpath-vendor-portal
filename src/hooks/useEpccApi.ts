@@ -3038,6 +3038,58 @@ export const useEpccApi = (orgId?: string, storeId?: string) => {
     [apiCall]
   );
 
+  /**
+   * Fetch order notes by order ID
+   */
+  const fetchOrderNotes = useCallback(
+    async (orderId: string) => {
+      return apiCall(async (client) => {
+        return await client.request.send(
+          `/extensions/notes?filter=eq(order_id,${orderId})`,
+          "GET",
+          undefined,
+          undefined,
+          client,
+          false,
+          "v2"
+        );
+      }, "Failed to fetch order notes");
+    },
+    [apiCall]
+  );
+
+  /**
+   * Create a note for an order
+   */
+  const createOrderNote = useCallback(
+    async (
+      orderId: string,
+      note: string,
+      addedBy?: string,
+      isPrivate: boolean = false
+    ) => {
+      return apiCall(async (client) => {
+        const payload = {
+          type: "note_ext",
+          order_id: orderId,
+          note: note,
+          private: isPrivate,
+          ...(addedBy && { added_by: addedBy }),
+        };
+        return await client.request.send(
+          `/extensions/notes`,
+          "POST",
+          payload,
+          undefined,
+          client,
+          undefined,
+          "v2"
+        );
+      }, "Failed to create order note");
+    },
+    [apiCall]
+  );
+
   // Reset API error when client changes
   useEffect(() => {
     if (isReady) {
@@ -3153,6 +3205,8 @@ export const useEpccApi = (orgId?: string, storeId?: string) => {
     createManualPayment,
     clearCartItems,
     fetchAccountOrders,
+    fetchOrderNotes,
+    createOrderNote,
     // Utility methods
     clearApiError: () => setApiError(null),
     isLoading: clientLoading || apiLoading,

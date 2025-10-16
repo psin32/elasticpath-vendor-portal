@@ -19,3 +19,6 @@ export { ProductAttributes } from "./products/ProductAttributes";
 export { ProductForm } from "./products/ProductForm";
 export { ProductPricing } from "./products/ProductPricing";
 export { ProductCategories } from "./products/ProductCategories";
+
+// Order Components
+export { default as OrderNotes } from "./orders/OrderNotes";

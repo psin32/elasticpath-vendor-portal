@@ -13,6 +13,7 @@ import FulfillmentOverlay from "../../../components/orders/FulfillmentOverlay";
 import OrderFulfillmentTab from "../../../components/orders/OrderFulfillmentTab";
 import AdditionalInfoAccordion from "../../../components/orders/AdditionalInfoAccordion";
 import CustomInputsAccordion from "../../../components/orders/CustomInputsAccordion";
+import OrderNotes from "../../../components/orders/OrderNotes";
 import {
   generateAndDownloadPackingSlip,
   type PackingSlipData,
@@ -54,9 +55,9 @@ export default function OrderDetailsPage({ params }: OrderDetailsPageProps) {
   const [generatingShippingLabel, setGeneratingShippingLabel] = useState<
     string | null
   >(null);
-  const [activeTab, setActiveTab] = useState<"details" | "fulfillment">(
-    "details"
-  );
+  const [activeTab, setActiveTab] = useState<
+    "details" | "fulfillment" | "notes"
+  >("details");
   const { showToast } = useToast();
 
   // Group items by shipping group
@@ -576,6 +577,16 @@ export default function OrderDetailsPage({ params }: OrderDetailsPageProps) {
                           </span>
                         )}
                       </button>
+                      <button
+                        onClick={() => setActiveTab("notes")}
+                        className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                          activeTab === "notes"
+                            ? "border-indigo-500 text-indigo-600"
+                            : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                        }`}
+                      >
+                        Notes
+                      </button>
                     </nav>
                   </div>
 
@@ -888,7 +899,7 @@ export default function OrderDetailsPage({ params }: OrderDetailsPageProps) {
                         </div>
                       </div>
                     </div>
-                  ) : (
+                  ) : activeTab === "fulfillment" ? (
                     /* Fulfillment Tab */
                     <OrderFulfillmentTab
                       order={order}
@@ -901,6 +912,13 @@ export default function OrderDetailsPage({ params }: OrderDetailsPageProps) {
                       generatingShippingLabel={generatingShippingLabel}
                       handleGeneratePackingSlip={handleGeneratePackingSlip}
                       handleGenerateShippingLabel={handleGenerateShippingLabel}
+                    />
+                  ) : (
+                    /* Notes Tab */
+                    <OrderNotes
+                      orderId={orderId}
+                      selectedOrgId={selectedOrgId || undefined}
+                      selectedStoreId={selectedStoreId || undefined}
                     />
                   )}
                 </div>
