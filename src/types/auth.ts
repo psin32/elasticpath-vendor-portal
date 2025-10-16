@@ -17,6 +17,10 @@ export interface User {
   email: string;
   organizations?: Organization[];
   stores?: Store[];
+  data: {
+    name: string;
+    email: string;
+  };
 }
 
 export interface Organization {

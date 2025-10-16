@@ -38,7 +38,7 @@ export default function OrderNotes({
   const [showAddForm, setShowAddForm] = useState(false);
   const [isPrivate, setIsPrivate] = useState(false);
   const { showToast } = useToast();
-  const { user } = useAuth();
+  const { user, isAuthenticated } = useAuth();
 
   const { fetchOrderNotes, createOrderNote } = useEpccApi(
     selectedOrgId,
@@ -79,7 +79,15 @@ export default function OrderNotes({
 
     setCreating(true);
     try {
-      const addedBy = user?.name || user?.email || "Unknown User";
+      console.log("Current user object:", user);
+      console.log("Is authenticated:", isAuthenticated);
+
+      let addedBy = "Unknown User";
+      if (user) {
+        addedBy = user.data.name || user.data.email || "Unknown User";
+      }
+
+      console.log("Added by:", addedBy);
       const response = await createOrderNote(
         orderId,
         newNote.trim(),
